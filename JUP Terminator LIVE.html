@@ -1,0 +1,2091 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>JUP-800 // TACTICAL TRADE SYSTEM</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=JetBrains+Mono:wght@400;500;700;800&family=Orbitron:wght@600;700;900&display=swap" rel="stylesheet">
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: #060405; }
+  body { font-family: 'JetBrains Mono', ui-monospace, monospace; color: #e9ddd8; -webkit-font-smoothing: antialiased; }
+  a { color: #ff8a5c; text-decoration: none; }
+  a:hover { color: #ffb020; }
+  input { border-radius: 0; }
+  ::selection { background: #ff2b2b; color: #060405; }
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-track { background: #0c0809; }
+  ::-webkit-scrollbar-thumb { background: #3a1114; border: 1px solid #5a1518; }
+  ::-webkit-scrollbar-thumb:hover { background: #5a1518; }
+  @keyframes flicker { 0%,19%,21%,23%,80%,83%,100%{opacity:1} 20%,22%,82%{opacity:.9} }
+  @keyframes sweepH { from{transform:translateX(-2px)} to{transform:translateX(calc(100% + 2px))} }
+  @keyframes sweepV { 0%{transform:translateY(-80px)} 100%{transform:translateY(100vh)} }
+  @keyframes scandrift { from{background-position:0 0} to{background-position:0 -1200px} }
+  @keyframes pulseDot { 0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(255,43,43,.7)} 50%{opacity:.35;box-shadow:0 0 0 6px rgba(255,43,43,0)} }
+  @keyframes reticleSpin { from{transform:rotate(0)} to{transform:rotate(360deg)} }
+  @keyframes blink { 0%,49%{opacity:1} 50%,100%{opacity:0} }
+  @keyframes bootScan { 0%{opacity:.25} 50%{opacity:.6} 100%{opacity:.25} }
+  @keyframes barPulse { 0%,100%{opacity:.55} 50%{opacity:1} }
+</style>
+</head>
+<body>
+
+<!-- ===================== TERMINATOR BACKGROUND ===================== -->
+<div id="bgPhoto" style="position:fixed;inset:0;z-index:0;pointer-events:none;background:linear-gradient(90deg, rgba(6,4,5,.50) 0%, rgba(6,4,5,.34) 34%, rgba(6,4,5,.78) 100%), radial-gradient(130% 130% at 28% 44%, rgba(6,4,5,0) 26%, rgba(6,4,5,.62) 100%), #060405 url('static/bg.jpg') center center / cover no-repeat;filter:saturate(1.04) contrast(1.02)"></div>
+
+<div style="position:fixed;inset:0;pointer-events:none;z-index:90;background:repeating-linear-gradient(0deg, rgba(0,0,0,0) 0px, rgba(0,0,0,0) 2px, rgba(0,0,0,.24) 3px, rgba(0,0,0,0) 4px);mix-blend-mode:multiply;animation:scandrift 24s linear infinite" id="crtLines"></div>
+<div style="position:fixed;inset:0;pointer-events:none;z-index:91;background:radial-gradient(120% 120% at 50% 40%, rgba(0,0,0,0) 46%, rgba(60,0,0,.26) 78%, rgba(0,0,0,.7) 100%)" id="crtVig"></div>
+<div style="position:fixed;left:0;right:0;top:0;height:80px;pointer-events:none;z-index:92;background:linear-gradient(180deg, rgba(255,43,43,.10), rgba(255,43,43,0));animation:sweepV 7s linear infinite;opacity:.5"></div>
+<div style="position:fixed;right:-40px;top:50%;transform:translateY(-50%);pointer-events:none;z-index:1;font-family:'Share Tech Mono',monospace;font-size:640px;line-height:1;color:rgba(255,43,43,.035);user-select:none">&#9760;</div>
+
+<div style="position:relative;z-index:5;min-height:100vh;min-width:1320px;padding:16px 18px 22px;animation:flicker 9s infinite">
+
+  <!-- ===================== TOP STATUS BAR ===================== -->
+  <div style="display:flex;align-items:stretch;gap:14px;border:1px solid #5a1518;background:linear-gradient(180deg,#140a0b,#0b0708);clip-path:polygon(0 0,calc(100% - 16px) 0,100% 16px,100% 100%,16px 100%,0 calc(100% - 16px));padding:12px 18px">
+    <div style="display:flex;flex-direction:column;justify-content:center;min-width:0">
+      <div style="font-family:'Orbitron',sans-serif;font-weight:900;font-size:22px;letter-spacing:2px;color:#ff2b2b;text-shadow:0 0 18px rgba(255,43,43,.5);line-height:1">JUP&#8209;800 <span style="color:#5a4340;font-weight:600">//</span> <span style="color:#e9ddd8">TACTICAL TRADE SYSTEM</span></div>
+      <div style="font-family:'Share Tech Mono',monospace;font-size:11px;letter-spacing:3px;color:#8a6a63;margin-top:3px">CYBERDYNE SYSTEMS &#183; MODEL 101 &#183; <span id="walletId">WALLET &#8212;</span></div>
+    </div>
+    <div style="flex:1"></div>
+    <div style="display:flex;align-items:center;gap:22px;font-family:'Share Tech Mono',monospace">
+      <div style="text-align:right">
+        <div style="font-size:10px;letter-spacing:2px;color:#8a6a63">MISSION TIME</div>
+        <div id="clock" style="font-size:18px;color:#ffb020;letter-spacing:1px">--:--:--</div>
+      </div>
+      <div style="width:1px;height:38px;background:#5a1518"></div>
+      <div style="text-align:right">
+        <div style="font-size:10px;letter-spacing:2px;color:#8a6a63">UPLINK</div>
+        <div id="uplink" style="font-size:13px;color:#3ee89a">JUPITER&#8202;v6 &#183; JITO&#8202;MEV &#183; SOL&#8202;MAINNET</div>
+      </div>
+      <div style="width:1px;height:38px;background:#5a1518"></div>
+      <div id="modeBadge" style="display:flex;align-items:center;gap:8px;padding:7px 14px;border:1px solid #5a1518;background:#1c0d0e;clip-path:polygon(0 0,calc(100% - 9px) 0,100% 9px,100% 100%,9px 100%,0 calc(100% - 9px))">
+        <span id="liveDot" style="width:9px;height:9px;border-radius:50%;background:#ffb020;animation:pulseDot 1.4s ease-in-out infinite"></span>
+        <span id="modeLabel" style="font-size:13px;letter-spacing:2px;color:#ffb020;font-weight:700">PAPER &#183; &#8212;</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== MAIN GRID ===================== -->
+  <div style="display:grid;grid-template-columns:352px minmax(452px,1fr) 372px;gap:14px;margin-top:14px;align-items:start">
+
+    <!-- ================= LEFT COLUMN ================= -->
+    <div style="display:flex;flex-direction:column;gap:14px;min-width:0">
+
+      <!-- TARGET ACQUISITION -->
+      <div style="position:relative;background:linear-gradient(180deg,#0e0a0b,#090708);border:1px solid #4a1418;clip-path:polygon(0 0,calc(100% - 14px) 0,100% 14px,100% 100%,14px 100%,0 calc(100% - 14px));padding:0 0 14px">
+        <div style="display:flex;align-items:center;gap:8px;padding:9px 14px;background:linear-gradient(90deg,#2a0f11,#160a0b);border-bottom:1px solid #4a1418">
+          <span style="width:6px;height:14px;background:#ff2b2b;box-shadow:0 0 8px #ff2b2b"></span>
+          <span style="font-family:'Share Tech Mono',monospace;font-size:12px;letter-spacing:3px;color:#ff5a5f">TARGET ACQUISITION</span>
+        </div>
+        <div style="padding:14px">
+          <div style="position:relative">
+            <input id="ca" spellcheck="false" autocomplete="off" placeholder="paste CA or search by name&#8230;" style="width:100%;background:#070506;border:1px solid #4a1418;color:#3ee89a;font-family:'JetBrains Mono',monospace;font-size:12px;padding:11px 34px 11px 14px;letter-spacing:.5px;outline:none">
+            <span style="position:absolute;right:11px;top:50%;transform:translateY(-50%);width:14px;height:14px;border:2px solid #ff2b2b;border-radius:50%;animation:reticleSpin 4s linear infinite"></span>
+          </div>
+          <div id="sres" style="margin-top:6px"></div>
+          <div style="font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:1px;color:#7a6a63;margin-top:7px">PASTE MINT / CONTRACT ADDRESS &#8212; OR TYPE A NAME TO SCAN</div>
+          <div style="display:flex;gap:7px;margin-top:11px">
+            <button id="btnDiscover" style="flex:0 0 auto;padding:6px 12px;font-family:'Share Tech Mono',monospace;font-size:11px;letter-spacing:2px;background:#2a0f11;color:#ff8a5c;border:1px solid #5a1518;cursor:pointer;clip-path:polygon(0 0,calc(100% - 7px) 0,100% 7px,100% 100%,7px 100%,0 calc(100% - 7px))">&#128640; DISCOVER</button>
+            <button id="btnSniper" style="flex:0 0 auto;padding:6px 12px;font-family:'Share Tech Mono',monospace;font-size:11px;letter-spacing:2px;background:#2a0f11;color:#ff8a5c;border:1px solid #5a1518;cursor:pointer;clip-path:polygon(0 0,calc(100% - 7px) 0,100% 7px,100% 100%,7px 100%,0 calc(100% - 7px))">&#127919; SNIPER</button>
+            <button id="btnVault" style="flex:0 0 auto;padding:6px 12px;font-family:'Share Tech Mono',monospace;font-size:11px;letter-spacing:2px;background:#2a0f11;color:#ff8a5c;border:1px solid #5a1518;cursor:pointer;clip-path:polygon(0 0,calc(100% - 7px) 0,100% 7px,100% 100%,7px 100%,0 calc(100% - 7px))">VAULT</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- THREAT ASSESSMENT / INTEL -->
+      <div style="position:relative;background:linear-gradient(180deg,#0e0a0b,#090708);border:1px solid #4a1418;clip-path:polygon(0 0,calc(100% - 14px) 0,100% 14px,100% 100%,14px 100%,0 calc(100% - 14px))">
+        <div style="display:flex;align-items:center;gap:8px;padding:9px 14px;background:linear-gradient(90deg,#2a0f11,#160a0b);border-bottom:1px solid #4a1418">
+          <span style="width:6px;height:14px;background:#ff2b2b;box-shadow:0 0 8px #ff2b2b"></span>
+          <span style="font-family:'Share Tech Mono',monospace;font-size:12px;letter-spacing:3px;color:#ff5a5f">THREAT ASSESSMENT</span>
+          <span style="flex:1"></span>
+          <span id="threatStatus" style="font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:2px;color:#8a6a63">&#9679; STANDBY</span>
+        </div>
+        <div id="threatBody" style="padding:14px">
+          <div style="color:#8a6a63;font-family:'Share Tech Mono',monospace;font-size:12px;padding:20px 0;text-align:center">AWAITING TARGET LOCK &#8212; PASTE A CONTRACT ADDRESS</div>
+        </div>
+      </div>
+
+      <!-- LIQUIDITY PROFILE -->
+      <div style="position:relative;background:linear-gradient(180deg,#0e0a0b,#090708);border:1px solid #4a1418;clip-path:polygon(0 0,calc(100% - 14px) 0,100% 14px,100% 100%,14px 100%,0 calc(100% - 14px))">
+        <div style="display:flex;align-items:center;gap:8px;padding:9px 14px;background:linear-gradient(90deg,#2a0f11,#160a0b);border-bottom:1px solid #4a1418">
+          <span style="width:6px;height:14px;background:#ff2b2b;box-shadow:0 0 8px #ff2b2b"></span>
+          <span style="font-family:'Share Tech Mono',monospace;font-size:12px;letter-spacing:2px;color:#ff5a5f">LIQUIDITY PROFILE</span>
+          <span style="flex:1"></span>
+          <span id="liqGrade" style="font-family:'Orbitron',sans-serif;font-weight:700;font-size:15px;letter-spacing:2px;color:#8a6a63">&#8212;</span>
+        </div>
+        <div id="liqBody" style="padding:12px 14px">
+          <div style="color:#8a6a63;font-family:'Share Tech Mono',monospace;font-size:12px;padding:14px 0;text-align:center">NO TARGET</div>
+        </div>
+      </div>
+
+      <!-- TECHNICALS / SIGNAL MATRIX -->
+      <div style="position:relative;background:linear-gradient(180deg,#0e0a0b,#090708);border:1px solid #4a1418;clip-path:polygon(0 0,calc(100% - 14px) 0,100% 14px,100% 100%,14px 100%,0 calc(100% - 14px))">
+        <div style="display:flex;align-items:center;gap:8px;padding:9px 14px;background:linear-gradient(90deg,#2a0f11,#160a0b);border-bottom:1px solid #4a1418">
+          <span style="width:6px;height:14px;background:#ff2b2b;box-shadow:0 0 8px #ff2b2b"></span>
+          <span style="font-family:'Share Tech Mono',monospace;font-size:12px;letter-spacing:2px;color:#ff5a5f">TECHNICALS // SIGNAL MATRIX</span>
+        </div>
+        <div id="signals" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1px;background:#2a0f11;border-bottom:1px solid #2a0f11"></div>
+        <div id="verdict" style="padding:12px 14px"></div>
+      </div>
+
+      <!-- ORDER FLOW TAPE -->
+      <div style="position:relative;background:linear-gradient(180deg,#0e0a0b,#090708);border:1px solid #4a1418;clip-path:polygon(0 0,calc(100% - 14px) 0,100% 14px,100% 100%,14px 100%,0 calc(100% - 14px))">
+        <div style="display:flex;align-items:center;gap:8px;padding:9px 14px;background:linear-gradient(90deg,#2a0f11,#160a0b);border-bottom:1px solid #4a1418">
+          <span style="width:6px;height:14px;background:#ff2b2b;box-shadow:0 0 8px #ff2b2b"></span>
+          <span style="font-family:'Share Tech Mono',monospace;font-size:12px;letter-spacing:3px;color:#ff5a5f">ORDER FLOW // TAPE</span>
+          <span style="flex:1"></span>
+          <span style="font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:2px;color:#ff2b2b;animation:barPulse 1.6s infinite">&#9679; LIVE</span>
+        </div>
+        <div id="tape" style="max-height:170px;overflow-y:auto;font-family:'JetBrains Mono',monospace;font-size:11px"></div>
+      </div>
+
+    </div>
+
+    <!-- ================= CENTER COLUMN ================= -->
+    <div style="display:flex;flex-direction:column;gap:14px;min-width:0">
+
+      <!-- LIVE CHART -->
+      <div style="position:relative;background:linear-gradient(180deg,#0e0a0b,#080607);border:1px solid #5a1518;clip-path:polygon(0 0,calc(100% - 16px) 0,100% 16px,100% 100%,16px 100%,0 calc(100% - 16px))">
+        <span style="position:absolute;left:8px;top:44px;width:20px;height:20px;border-left:2px solid #ff2b2b;border-top:2px solid #ff2b2b;z-index:3"></span>
+        <span style="position:absolute;right:8px;top:44px;width:20px;height:20px;border-right:2px solid #ff2b2b;border-top:2px solid #ff2b2b;z-index:3"></span>
+        <span style="position:absolute;left:8px;bottom:8px;width:20px;height:20px;border-left:2px solid #ff2b2b;border-bottom:2px solid #ff2b2b;z-index:3"></span>
+        <span style="position:absolute;right:8px;bottom:8px;width:20px;height:20px;border-right:2px solid #ff2b2b;border-bottom:2px solid #ff2b2b;z-index:3"></span>
+
+        <div style="display:flex;align-items:center;gap:10px;padding:9px 16px;background:linear-gradient(90deg,#2a0f11,#160a0b);border-bottom:1px solid #4a1418">
+          <span style="width:6px;height:14px;background:#ff2b2b;box-shadow:0 0 8px #ff2b2b"></span>
+          <img id="chIcon" alt="" style="width:20px;height:20px;border-radius:50%;border:1px solid #5a1518;object-fit:cover;display:none">
+          <span id="chSym" style="font-family:'Orbitron',sans-serif;font-weight:700;font-size:14px;letter-spacing:2px;color:#e9ddd8">&#8212;</span>
+          <span id="chLock" style="font-family:'Share Tech Mono',monospace;font-size:11px;letter-spacing:2px;color:#ff2b2b;border:1px solid #5a1518;padding:2px 7px">&#9873; STANDBY</span>
+          <span id="chPrice" style="font-family:'JetBrains Mono',monospace;font-size:13px;color:#ffb020"></span>
+          <span id="chStatus" style="font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:1px;color:#ffb020;display:none"></span>
+          <span style="flex:1"></span>
+          <span id="tfbtns" style="display:flex;gap:4px"></span>
+          <span style="font-family:'Share Tech Mono',monospace;font-size:11px"><a id="dslink" target="_blank">dexscreener</a> &#183; <a id="belink" target="_blank">birdeye</a></span>
+        </div>
+        <div id="tech" style="display:flex;flex-wrap:wrap;align-items:center;gap:12px;padding:8px 12px 2px;border-bottom:1px solid #1a0e0f"></div>
+        <div id="chartWrap" style="position:relative;padding:4px 10px 6px">
+          <canvas id="priceCanvas" style="width:100%;height:440px;display:block"></canvas>
+          <div id="sweep" style="position:absolute;top:4px;bottom:6px;left:10px;width:2px;background:linear-gradient(180deg,rgba(255,43,43,0),#ff2b2b,rgba(255,43,43,0));box-shadow:0 0 14px #ff2b2b;animation:sweepH 5.5s linear infinite;pointer-events:none"></div>
+          <div id="zoomBadge" style="position:absolute;top:10px;right:14px;font-family:'Share Tech Mono',monospace;font-size:11px;letter-spacing:2px;color:#ffb020;background:rgba(10,7,8,.85);border:1px solid #5a1518;padding:3px 9px;opacity:0;transition:opacity .25s;pointer-events:none">ZOOM 1.00&#215;</div>
+        </div>
+      </div>
+
+      <!-- MARKET DEPTH / ORDER FLOW DEPTH -->
+      <div style="position:relative;background:linear-gradient(180deg,#0e0a0b,#090708);border:1px solid #4a1418;clip-path:polygon(0 0,calc(100% - 14px) 0,100% 14px,100% 100%,14px 100%,0 calc(100% - 14px))">
+        <div style="display:flex;align-items:center;gap:8px;padding:9px 16px;background:linear-gradient(90deg,#2a0f11,#160a0b);border-bottom:1px solid #4a1418">
+          <span style="width:6px;height:14px;background:#ff2b2b;box-shadow:0 0 8px #ff2b2b"></span>
+          <span style="font-family:'Share Tech Mono',monospace;font-size:12px;letter-spacing:3px;color:#ff5a5f">MARKET DEPTH // FLOW PRESSURE</span>
+          <span style="flex:1"></span>
+          <span style="font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:2px;color:#7a6a63">CUMULATIVE FLOW ($)</span>
+        </div>
+        <div style="display:grid;grid-template-columns:minmax(0,1fr) 184px;gap:14px;padding:12px 16px">
+          <div>
+            <canvas id="depthCanvas" style="width:100%;height:132px;display:block"></canvas>
+            <div id="depthStats" style="display:flex;justify-content:space-between;font-family:'Share Tech Mono',monospace;font-size:11px;letter-spacing:1px;margin-top:8px;padding-top:8px;border-top:1px solid #2a0f11"></div>
+          </div>
+          <div id="ladder" style="border-left:1px solid #2a0f11;padding-left:2px"></div>
+        </div>
+      </div>
+
+      <!-- FIRE CONTROL / EXECUTE -->
+      <div style="position:relative;background:linear-gradient(180deg,#0e0a0b,#090708);border:1px solid #5a1518;clip-path:polygon(0 0,calc(100% - 16px) 0,100% 16px,100% 100%,16px 100%,0 calc(100% - 16px))">
+        <div style="display:flex;align-items:center;gap:8px;padding:9px 16px;background:linear-gradient(90deg,#2a0f11,#160a0b);border-bottom:1px solid #4a1418">
+          <span style="width:6px;height:14px;background:#ff2b2b;box-shadow:0 0 8px #ff2b2b"></span>
+          <span style="font-family:'Share Tech Mono',monospace;font-size:12px;letter-spacing:3px;color:#ff5a5f">FIRE CONTROL</span>
+          <span style="flex:1"></span>
+          <span id="fcTarget" style="font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:2px;color:#7a6a63">NO TARGET</span>
+        </div>
+        <div style="padding:16px">
+          <div style="font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:2px;color:#3ee89a;margin-bottom:8px">ACQUIRE // BUY (SOL)</div>
+          <div id="buys" style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px"></div>
+          <div style="font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:2px;color:#ff5a5f;margin:16px 0 8px">LIQUIDATE // SELL (%)</div>
+          <div id="sells" style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px"></div>
+          <div style="display:flex;gap:12px;margin-top:14px;flex-wrap:wrap">
+            <div style="flex:1;min-width:120px"><label style="font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:1px;color:#7a6a63">CUSTOM BUY (SOL)</label><input id="cbuyIn" placeholder="0.15" style="width:100%;margin-top:4px;background:#070506;border:1px solid #4a1418;color:#e9ddd8;font-family:'JetBrains Mono',monospace;font-size:13px;padding:8px 10px;outline:none"></div>
+            <div style="flex:1;min-width:120px"><label style="font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:1px;color:#7a6a63">SLIPPAGE %</label><input id="slipIn" value="3" style="width:100%;margin-top:4px;background:#070506;border:1px solid #4a1418;color:#e9ddd8;font-family:'JetBrains Mono',monospace;font-size:13px;padding:8px 10px;outline:none"></div>
+            <div style="display:flex;align-items:flex-end;gap:16px;padding-bottom:4px">
+              <!-- Was a MEV PROTECT checkbox. It only ever chose between a Jito
+                   tip (max 0.0003 SOL) and a "high" priority fee capped at
+                   0.002 SOL, so unchecking it to "skip the Jito fee" actually
+                   raised the ceiling ~7x. Three explicit modes instead. -->
+              <div style="display:flex;flex-direction:column;gap:3px">
+                <span style="font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:1px;color:#7a6a63">FEE MODE</span>
+                <div style="display:flex;gap:4px">
+                  <button class="feeM" data-m="mev" style="padding:5px 9px;font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:1px;background:#0d090a;color:#7a6a63;border:1px solid #3a1014;cursor:pointer">MEV</button>
+                  <button class="feeM" data-m="fast" style="padding:5px 9px;font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:1px;background:#0d090a;color:#7a6a63;border:1px solid #3a1014;cursor:pointer">FAST</button>
+                  <button class="feeM" data-m="eco" style="padding:5px 9px;font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:1px;background:#0d090a;color:#7a6a63;border:1px solid #3a1014;cursor:pointer">ECO</button>
+                </div>
+                <span id="feeNote" style="font-family:'JetBrains Mono',monospace;font-size:9px;color:#7a6a63;max-width:340px;line-height:1.4"></span>
+              </div>
+              <label id="slLbl" style="display:flex;align-items:center;gap:7px;cursor:pointer;font-family:'Share Tech Mono',monospace;font-size:11px;letter-spacing:1px;color:#7a6a63"><span id="slBox" style="width:15px;height:15px;border:1px solid #5a1518;background:#070506;display:inline-block"></span>AUTO SLIP</label>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- MISSION DASHBOARD -->
+      <div style="position:relative;background:linear-gradient(180deg,#0e0a0b,#090708);border:1px solid #4a1418;clip-path:polygon(0 0,calc(100% - 14px) 0,100% 14px,100% 100%,14px 100%,0 calc(100% - 14px))">
+        <div style="display:flex;align-items:center;gap:8px;padding:9px 16px;background:linear-gradient(90deg,#2a0f11,#160a0b);border-bottom:1px solid #4a1418">
+          <span style="width:6px;height:14px;background:#ff2b2b;box-shadow:0 0 8px #ff2b2b"></span>
+          <span style="font-family:'Share Tech Mono',monospace;font-size:12px;letter-spacing:3px;color:#ff5a5f">MISSION DASHBOARD</span>
+        </div>
+        <div style="padding:14px 16px">
+          <div id="dashTiles" style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px"></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px">
+            <div><div style="font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:1px;color:#7a6a63;margin-bottom:4px">EQUITY (USD)</div><canvas id="eqCanvas" style="width:100%;height:96px;display:block"></canvas></div>
+            <div><div style="font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:1px;color:#7a6a63;margin-bottom:4px">CUMULATIVE PNL (&#9678;)</div><canvas id="pnlCanvas" style="width:100%;height:96px;display:block"></canvas></div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ================= RIGHT COLUMN ================= -->
+    <div style="display:flex;flex-direction:column;gap:14px;min-width:0">
+
+      <!-- TAB BAR. This column was 7 cards deep and the KOL panel landed 6th,
+           which is why it read as "missing". Tabs scope the column instead of
+           restructuring the page: chart and technicals stay permanently visible
+           in the other two columns, which is what you actually watch while
+           trading. Panes are toggled by data-pane below. -->
+      <!-- feed-endpoint banner: only visible when the flow feed is NOT on the
+           private RPC, or is down. Sits above the tab bar so it shows on every
+           tab. Painted by paintRpcBanner() from /api/sniper's flow block. -->
+      <div id="rpcBanner" style="display:none;padding:6px 10px;border:1px solid #5a4a18;background:#1a1405;font-family:'JetBrains Mono',monospace;font-size:10px;line-height:1.4"></div>
+
+      <div id="tabBar" style="display:flex;gap:1px;background:#2a0f11;border:1px solid #4a1418">
+        <button class="rtab" data-pane="sniper" style="flex:1;padding:7px 4px;font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:1px;background:#2a0f11;color:#ff8a5c;border:0;cursor:pointer">SNIPER</button>
+        <button class="rtab" data-pane="kol" style="flex:1;padding:7px 4px;font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:1px;background:#0d090a;color:#7a6a63;border:0;cursor:pointer">KOL</button>
+        <button class="rtab" data-pane="wallets" style="flex:1;padding:7px 4px;font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:1px;background:#0d090a;color:#7a6a63;border:0;cursor:pointer">WALLETS</button>
+        <button class="rtab" data-pane="evm" style="flex:1;padding:7px 4px;font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:1px;background:#0d090a;color:#7a6a63;border:0;cursor:pointer">EVM</button>
+        <button class="rtab" data-pane="targets" style="flex:1;padding:7px 4px;font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:1px;background:#0d090a;color:#7a6a63;border:0;cursor:pointer">TARGETS</button>
+      </div>
+
+      <!-- COPY-SNIPER -->
+      <div data-pane="sniper" style="position:relative;background:linear-gradient(180deg,#0e0a0b,#090708);border:1px solid #5a1518;clip-path:polygon(0 0,calc(100% - 14px) 0,100% 14px,100% 100%,14px 100%,0 calc(100% - 14px))">
+        <div style="display:flex;align-items:center;gap:8px;padding:9px 14px;background:linear-gradient(90deg,#2a0f11,#160a0b);border-bottom:1px solid #4a1418">
+          <span style="width:6px;height:14px;background:#ff2b2b;box-shadow:0 0 8px #ff2b2b"></span>
+          <span style="font-family:'Share Tech Mono',monospace;font-size:12px;letter-spacing:2px;color:#ff5a5f">COPY-SNIPER // AUTONOMOUS</span>
+        </div>
+        <div style="padding:14px">
+          <div style="display:flex;align-items:center;gap:8px">
+            <span id="snDot" style="width:9px;height:9px;border-radius:50%;background:#ffb020;animation:pulseDot 1.4s ease-in-out infinite"></span>
+            <span id="snMode" style="font-family:'Share Tech Mono',monospace;font-size:12px;letter-spacing:2px;color:#ffb020">&#8212;</span>
+            <span style="flex:1"></span>
+            <button id="snStart" style="padding:5px 12px;font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:2px;background:#0c1f16;color:#3ee89a;border:1px solid #1f5a3f;cursor:pointer">START</button>
+            <button id="snStop" style="padding:5px 12px;font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:2px;background:#2a0d10;color:#ff5a5f;border:1px solid #5a1518;cursor:pointer">STOP</button>
+          </div>
+          <div id="snStats" style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#8a6a63;margin-top:8px">&#8212;</div>
+          <div style="margin-top:10px">
+            <label style="font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:1px;color:#7a6a63">TARGET WALLET &#8212; MIRRORS ITS pump.fun LAUNCHES</label>
+            <input id="snTarget" spellcheck="false" style="width:100%;margin-top:4px;background:#070506;border:1px solid #4a1418;color:#3ee89a;font-family:'JetBrains Mono',monospace;font-size:11px;padding:8px 10px;outline:none">
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px">
+            <div><label style="font-family:'Share Tech Mono',monospace;font-size:10px;color:#7a6a63">SOL/SNIPE</label><input id="snSol" style="width:100%;margin-top:3px;background:#070506;border:1px solid #4a1418;color:#e9ddd8;font-family:'JetBrains Mono',monospace;font-size:12px;padding:6px 8px;outline:none"></div>
+            <div><label style="font-family:'Share Tech Mono',monospace;font-size:10px;color:#7a6a63">TP %</label><input id="snTp" style="width:100%;margin-top:3px;background:#070506;border:1px solid #4a1418;color:#e9ddd8;font-family:'JetBrains Mono',monospace;font-size:12px;padding:6px 8px;outline:none"></div>
+            <div><label style="font-family:'Share Tech Mono',monospace;font-size:10px;color:#7a6a63">SL %</label><input id="snSl" style="width:100%;margin-top:3px;background:#070506;border:1px solid #4a1418;color:#e9ddd8;font-family:'JetBrains Mono',monospace;font-size:12px;padding:6px 8px;outline:none"></div>
+            <div><label style="font-family:'Share Tech Mono',monospace;font-size:10px;color:#7a6a63">TIMEOUT m</label><input id="snTimeout" style="width:100%;margin-top:3px;background:#070506;border:1px solid #4a1418;color:#e9ddd8;font-family:'JetBrains Mono',monospace;font-size:12px;padding:6px 8px;outline:none"></div>
+            <div><label style="font-family:'Share Tech Mono',monospace;font-size:10px;color:#7a6a63">CAP SOL/d</label><input id="snCap" style="width:100%;margin-top:3px;background:#070506;border:1px solid #4a1418;color:#e9ddd8;font-family:'JetBrains Mono',monospace;font-size:12px;padding:6px 8px;outline:none"></div>
+            <button id="snSave" style="align-self:end;padding:7px 8px;font-family:'Share Tech Mono',monospace;font-size:11px;letter-spacing:1px;background:#2a0f11;color:#ff8a5c;border:1px solid #5a1518;cursor:pointer">SAVE</button>
+          </div>
+          <label id="snArmLbl" style="display:flex;align-items:center;gap:8px;margin-top:12px;cursor:pointer">
+            <span id="snArmBox" style="width:15px;height:15px;border:1px solid #5a1518;background:#070506;display:inline-block"></span>
+            <span style="font-family:'Share Tech Mono',monospace;font-size:11px;letter-spacing:1px;color:#ff2b2b;font-weight:700">ARM LIVE</span>
+            <span style="font-family:'Share Tech Mono',monospace;font-size:10px;color:#7a6a63">(REAL SOL &#8212; OFF = PAPER)</span>
+          </label>
+          <!-- SMART EXIT (flow-evidence exit engine — smart_exit.py) -->
+          <div style="margin-top:12px;border-top:1px solid #2a1416;padding-top:10px">
+            <div style="display:flex;align-items:center;gap:8px">
+              <span style="font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:2px;color:#ff8a5c">SMART EXIT</span>
+              <span id="smxState" style="font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:1px;color:#7a6a63">&#8212;</span>
+              <span style="flex:1"></span>
+              <span id="smxLive" style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#7a6a63">&#8212;</span>
+            </div>
+            <div id="smxBoard" style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#8a6a63;margin-top:6px">&#8212;</div>
+          </div>
+
+          <!-- PYRAMID (scale-in ladder — pyramid.py). GHOST: simulated legs,
+               no SOL moves and NO position is created, which is why none of
+               this shows up in the positions table below. -->
+          <div style="margin-top:12px;border-top:1px solid #2a1416;padding-top:10px">
+            <div style="display:flex;align-items:center;gap:8px">
+              <span style="font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:2px;color:#ff8a5c">PYRAMID</span>
+              <span id="pyrState" style="font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:1px;color:#7a6a63">&#8212;</span>
+              <span style="flex:1"></span>
+              <span id="pyrLive" style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#7a6a63">&#8212;</span>
+            </div>
+            <div id="pyrBook" style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#8a6a63;margin-top:6px">&#8212;</div>
+          </div>
+
+          <!-- positions: sniper (copy_target) vs the graduating/legacy sleeves -->
+          <div style="display:flex;gap:4px;margin-top:12px">
+            <button id="snFAll" class="snFilt" style="flex:1;padding:5px 4px;font-family:'Share Tech Mono',monospace;font-size:9px;letter-spacing:1px;background:#2a0f11;color:#ff8a5c;border:1px solid #5a1518;cursor:pointer">ALL <span id="snCntAll">0</span></button>
+            <button id="snFSnipe" class="snFilt" style="flex:1;padding:5px 4px;font-family:'Share Tech Mono',monospace;font-size:9px;letter-spacing:1px;background:#0d090a;color:#7a6a63;border:1px solid #3a1014;cursor:pointer">SNIPER <span id="snCntSniper">0</span></button>
+            <button id="snFOther" class="snFilt" style="flex:1;padding:5px 4px;font-family:'Share Tech Mono',monospace;font-size:9px;letter-spacing:1px;background:#0d090a;color:#7a6a63;border:1px solid #3a1014;cursor:pointer">GRAD/OTHER <span id="snCntOther">0</span></button>
+          </div>
+          <div style="margin-top:6px;max-height:280px;overflow-y:auto">
+            <table style="width:100%;font-family:'JetBrains Mono',monospace;font-size:10px;text-align:right;border-collapse:collapse">
+              <thead><tr style="color:#7a6a63"><td style="text-align:left;position:sticky;top:0;background:#0d090a">TOKEN</td><td style="position:sticky;top:0;background:#0d090a">TIME</td><td style="position:sticky;top:0;background:#0d090a">STATUS</td><td style="position:sticky;top:0;background:#0d090a">ENTRY</td><td style="position:sticky;top:0;background:#0d090a">PNL&#9678;</td></tr></thead>
+              <tbody id="snPos"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ASSET INVENTORY / HOLDINGS -->
+      <div data-pane="sniper" style="position:relative;background:linear-gradient(180deg,#0e0a0b,#090708);border:1px solid #4a1418;clip-path:polygon(0 0,calc(100% - 14px) 0,100% 14px,100% 100%,14px 100%,0 calc(100% - 14px))">
+        <div style="display:flex;align-items:center;gap:8px;padding:9px 14px;background:linear-gradient(90deg,#2a0f11,#160a0b);border-bottom:1px solid #4a1418">
+          <span style="width:6px;height:14px;background:#ff2b2b;box-shadow:0 0 8px #ff2b2b"></span>
+          <span style="font-family:'Share Tech Mono',monospace;font-size:12px;letter-spacing:2px;color:#ff5a5f">ASSET INVENTORY</span>
+          <span style="flex:1"></span>
+          <span id="holdTotal" style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#ffb020">&#8212;</span>
+          <button id="holdPop" title="pop out a small trade window — click: popup (Chrome shows an address bar) · shift-click: floating PiP, always on top · sellbox.bat: plain window, no address bar" style="margin-left:8px;padding:2px 7px;font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:1px;background:#2a0d10;color:#ff8a5c;border:1px solid #5a1518;cursor:pointer">&#9106; POP OUT</button>
+        </div>
+        <div id="holdBody" style="padding:12px 14px;display:flex;flex-direction:column;gap:8px">
+          <div style="color:#8a6a63;font-size:11px">scanning wallet&#8230;</div>
+        </div>
+      </div>
+
+      <!-- EVM WATCH WALLETS (view-only) -->
+      <div data-pane="evm" style="position:relative;background:linear-gradient(180deg,#0e0a0b,#090708);border:1px solid #4a1418;clip-path:polygon(0 0,calc(100% - 14px) 0,100% 14px,100% 100%,14px 100%,0 calc(100% - 14px))">
+        <div style="display:flex;align-items:center;gap:8px;padding:9px 14px;background:linear-gradient(90deg,#2a0f11,#160a0b);border-bottom:1px solid #4a1418">
+          <span style="width:6px;height:14px;background:#ff2b2b;box-shadow:0 0 8px #ff2b2b"></span>
+          <span style="font-family:'Share Tech Mono',monospace;font-size:12px;letter-spacing:2px;color:#ff5a5f">WATCH WALLETS // EVM</span>
+          <span style="flex:1"></span>
+          <span id="evmTotal" style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#ffb020">&#8212;</span>
+        </div>
+        <div style="padding:10px 14px 0;display:flex;gap:6px">
+          <input id="evmAddr" placeholder="0x&#8230; wallet address (view-only)" spellcheck="false" style="flex:1;min-width:0;background:#070506;border:1px solid #4a1418;color:#e9ddd8;font-family:'JetBrains Mono',monospace;font-size:11px;padding:6px 8px;outline:none">
+          <button id="evmAdd" style="padding:6px 12px;font-family:'Share Tech Mono',monospace;font-size:11px;letter-spacing:1px;background:#2a0d10;color:#ff5a5f;border:1px solid #5a1518;cursor:pointer">WATCH</button>
+        </div>
+        <div id="evmBody" style="padding:10px 14px 12px;display:flex;flex-direction:column;gap:10px;max-height:300px;overflow-y:auto">
+          <div style="color:#8a6a63;font-size:11px">no EVM wallets watched &#8212; paste a 0x address to track its coins (Robinhood Chain, Base, Ethereum, Arbitrum, Optimism, Polygon, Gnosis)</div>
+        </div>
+      </div>
+
+      <!-- EVM TRADING WALLET (encrypted vault) -->
+      <div data-pane="evm" style="position:relative;background:linear-gradient(180deg,#0e0a0b,#090708);border:1px solid #4a1418;clip-path:polygon(0 0,calc(100% - 14px) 0,100% 14px,100% 100%,14px 100%,0 calc(100% - 14px))">
+        <div style="display:flex;align-items:center;gap:8px;padding:9px 14px;background:linear-gradient(90deg,#2a0f11,#160a0b);border-bottom:1px solid #4a1418">
+          <span style="width:6px;height:14px;background:#ff2b2b;box-shadow:0 0 8px #ff2b2b"></span>
+          <span style="font-family:'Share Tech Mono',monospace;font-size:12px;letter-spacing:2px;color:#ff5a5f">EVM WALLET // VAULT</span>
+          <span style="flex:1"></span>
+          <span id="ewStatus" style="font-family:'Share Tech Mono',monospace;font-size:10px;color:#7a6a63">LOCKED</span>
+        </div>
+        <div id="ewBody" style="padding:10px 14px 12px;display:flex;flex-direction:column;gap:8px;font-size:11px;color:#8a6a63">loading&#8230;</div>
+      </div>
+
+      <!-- EVM COPY WATCH (Phase 0, paper only) -->
+      <div data-pane="evm" style="position:relative;background:linear-gradient(180deg,#0e0a0b,#090708);border:1px solid #4a1418;clip-path:polygon(0 0,calc(100% - 14px) 0,100% 14px,100% 100%,14px 100%,0 calc(100% - 14px))">
+        <div style="display:flex;align-items:center;gap:8px;padding:9px 14px;background:linear-gradient(90deg,#2a0f11,#160a0b);border-bottom:1px solid #4a1418">
+          <span style="width:6px;height:14px;background:#ffb020;box-shadow:0 0 8px #ffb020"></span>
+          <span style="font-family:'Share Tech Mono',monospace;font-size:12px;letter-spacing:2px;color:#ff5a5f">COPY WATCH // EVM</span>
+          <span style="font-family:'Share Tech Mono',monospace;font-size:9px;letter-spacing:1px;color:#ffb020;border:1px solid #5a4a18;padding:1px 5px;background:#1a1405">PAPER ONLY</span>
+          <span style="flex:1"></span>
+          <span id="ecPnl" style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#ffb020">&#8212;</span>
+        </div>
+        <div id="ecBody" style="padding:10px 14px 12px;display:flex;flex-direction:column;gap:8px;max-height:300px;overflow-y:auto;font-size:11px;color:#8a6a63">starting watcher&#8230;</div>
+      </div>
+
+      <!-- WALLETS DB (wallets_db.py) — unified cross-chain registry.
+           Merges four stores that each knew only their own wallets:
+           sniper_config target, evm_copy_config targets, evm_wallets watch,
+           and the scraped kolscan board. Scraped rows are RENDERED, never
+           stored — kolscan reranks constantly and a copy would drift.
+           No balance enrichment here: /api/evm/wallets scans 7 chains per
+           address (~90s for one), so rows render from JSON and holdings stay
+           on the EVM tab's on-demand call. -->
+      <div data-pane="wallets" style="position:relative;background:linear-gradient(180deg,#0e0a0b,#090708);border:1px solid #4a1418;clip-path:polygon(0 0,calc(100% - 14px) 0,100% 14px,100% 100%,14px 100%,0 calc(100% - 14px))">
+        <div style="display:flex;align-items:center;gap:8px;padding:9px 14px;background:linear-gradient(90deg,#2a0f11,#160a0b);border-bottom:1px solid #4a1418">
+          <span style="width:6px;height:14px;background:#a678ff;box-shadow:0 0 8px #a678ff"></span>
+          <span style="font-family:'Share Tech Mono',monospace;font-size:12px;letter-spacing:2px;color:#ff5a5f">WALLETS // MULTI-CHAIN</span>
+          <span style="flex:1"></span>
+          <span id="wdbCount" style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#7a6a63">&#8212;</span>
+        </div>
+        <div style="padding:9px 14px 0;display:flex;gap:4px">
+          <input id="wdbAddr" placeholder="0x… or Solana address" spellcheck="false" style="flex:1;min-width:0;background:#0d090a;border:1px solid #3a1014;color:#e9ddd8;font-family:'JetBrains Mono',monospace;font-size:10px;padding:5px 6px;outline:none">
+          <input id="wdbLabel" placeholder="label" spellcheck="false" style="width:74px;background:#0d090a;border:1px solid #3a1014;color:#e9ddd8;font-family:'JetBrains Mono',monospace;font-size:10px;padding:5px 6px;outline:none">
+          <select id="wdbKind" style="background:#0d090a;border:1px solid #3a1014;color:#e9ddd8;font-family:'Share Tech Mono',monospace;font-size:10px;padding:5px 2px;outline:none">
+            <option value="whale">whale</option><option value="kol">kol</option>
+            <option value="watch">watch</option><option value="copy-target">copy-tgt</option>
+            <option value="other">other</option>
+          </select>
+          <button id="wdbAdd" style="padding:5px 8px;font-family:'Share Tech Mono',monospace;font-size:10px;background:#2a0f11;color:#ff8a5c;border:1px solid #5a1518;cursor:pointer">ADD</button>
+        </div>
+        <div id="wdbMsg" style="padding:4px 14px 0;font-family:'JetBrains Mono',monospace;font-size:10px;color:#7a6a63"></div>
+        <div id="wdbBody" style="padding:8px 14px 12px;max-height:340px;overflow-y:auto;font-size:11px;color:#8a6a63">loading registry&#8230;</div>
+      </div>
+
+      <!-- KOL LEADERBOARD (kolscan.io via kol_source.py).
+           Scraped, UNVERIFIED: every PnL here is kolscan's claim, not our
+           on-chain math. This panel is a candidate list, never evidence.
+           `days` is the column that matters — kolscan's timeframe switch is
+           client-side so scraping only ever sees the DAILY board, and a daily
+           board floats one-lucky-launch wallets to the top (18 of 50 had <10
+           closed trades on 08-02). days/median come from our own poll journal. -->
+      <div data-pane="kol" style="position:relative;background:linear-gradient(180deg,#0e0a0b,#090708);border:1px solid #4a1418;clip-path:polygon(0 0,calc(100% - 14px) 0,100% 14px,100% 100%,14px 100%,0 calc(100% - 14px))">
+        <div style="display:flex;align-items:center;gap:8px;padding:9px 14px;background:linear-gradient(90deg,#2a0f11,#160a0b);border-bottom:1px solid #4a1418">
+          <span style="width:6px;height:14px;background:#5ac8ff;box-shadow:0 0 8px #5ac8ff"></span>
+          <span style="font-family:'Share Tech Mono',monospace;font-size:12px;letter-spacing:2px;color:#ff5a5f">KOL // LEADERBOARD</span>
+          <span style="font-family:'Share Tech Mono',monospace;font-size:9px;letter-spacing:1px;color:#5ac8ff;border:1px solid #1a4a5a;padding:1px 5px;background:#05141a">UNVERIFIED</span>
+          <span style="flex:1"></span>
+          <span id="kolState" style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#7a6a63">&#8212;</span>
+        </div>
+        <div id="kolTarget" style="padding:8px 14px 0;font-family:'JetBrains Mono',monospace;font-size:10px;color:#8a6a63"></div>
+        <div id="kolBody" style="padding:8px 14px 12px;max-height:320px;overflow-y:auto;font-size:11px;color:#8a6a63">loading leaderboard&#8230;</div>
+      </div>
+
+      <!-- DISCOVER -->
+      <div data-pane="targets" style="position:relative;background:linear-gradient(180deg,#0e0a0b,#090708);border:1px solid #4a1418;clip-path:polygon(0 0,calc(100% - 14px) 0,100% 14px,100% 100%,14px 100%,0 calc(100% - 14px))">
+        <div style="display:flex;align-items:center;gap:8px;padding:9px 14px;background:linear-gradient(90deg,#2a0f11,#160a0b);border-bottom:1px solid #4a1418">
+          <span style="width:6px;height:14px;background:#ff2b2b;box-shadow:0 0 8px #ff2b2b"></span>
+          <span style="font-family:'Share Tech Mono',monospace;font-size:12px;letter-spacing:2px;color:#ff5a5f">TARGETS // GRADUATING</span>
+          <span style="flex:1"></span>
+          <span style="font-family:'Share Tech Mono',monospace;font-size:10px;color:#7a6a63">SCANNING pump.fun</span>
+        </div>
+        <div id="discover" style="padding:10px 14px;display:flex;flex-direction:column;gap:9px;max-height:230px;overflow-y:auto"></div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ===================== SYSTEM LOG ===================== -->
+  <div style="position:relative;background:linear-gradient(180deg,#0e0a0b,#090708);border:1px solid #4a1418;clip-path:polygon(0 0,calc(100% - 16px) 0,100% 16px,100% 100%,16px 100%,0 calc(100% - 16px));margin-top:14px">
+    <div style="display:flex;align-items:center;gap:8px;padding:9px 16px;background:linear-gradient(90deg,#2a0f11,#160a0b);border-bottom:1px solid #4a1418">
+      <span style="width:6px;height:14px;background:#ff2b2b;box-shadow:0 0 8px #ff2b2b"></span>
+      <span style="font-family:'Share Tech Mono',monospace;font-size:12px;letter-spacing:3px;color:#ff5a5f">SYSTEM LOG</span>
+      <span style="flex:1"></span>
+      <span style="font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:2px;color:#3ee89a">&#9679; STREAMING</span>
+    </div>
+    <div id="bootlog" style="padding:12px 16px;font-family:'Share Tech Mono',monospace;font-size:12px;letter-spacing:.5px;line-height:1.7;min-height:120px;max-height:220px;overflow-y:auto;color:#8a6a63"></div>
+  </div>
+
+</div>
+
+<script>
+"use strict";
+var $ = function(id){ return document.getElementById(id); };
+var T = { mint:null, sym:'', tf:'1m', candles:[], vols:[], ind:null, book:null,
+          zoom:1, base:440, mev:true, feeMode:'mev', dynSlip:false, busy:false, flowBuyPct:null,
+          chartTimer:null, tickCount:0, searchTimer:null, lastResults:[], live:false,
+          evmChains:[] };
+function evmTradeable(chain){ return T.evmChains.indexOf((chain||'').toLowerCase())>=0; }
+// shared with the /popout sell box under the same key, so the fee mode he picks
+// in one window is the one the other fires with
+try{ var _fm=localStorage.getItem('t8_feeMode');
+     if(_fm==='mev'||_fm==='fast'||_fm==='eco'){ T.feeMode=_fm; T.mev=(_fm==='mev'); } }catch(e){}
+var G='#3ee89a', R='#ff5a5f', A='#ffb020';
+var SOLUSD=null;        // set from /api/holdings; used by the liquidity panel
+var MINT_RE = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
+var EVM_RE = /^0x[0-9a-fA-F]{40}$/;   /* Robinhood Chain / Base / Ethereum / … — view-only */
+
+/* ---------- api ---------- */
+async function jget(u){ var r = await fetch(u); return r.json(); }
+async function jpost(u,b){ var r = await fetch(u,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b||{})}); return r.json(); }
+
+/* ---------- fmt ---------- */
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c];}); }
+function fmtPrice(p){ p=Number(p); return p>=1 ? p.toFixed(4) : p.toPrecision(4); }
+function fmtUsd(n){ if(n==null) return '?'; n=Number(n);
+  if(n>=1e9) return '$'+(n/1e9).toFixed(2)+'B';
+  if(n>=1e6) return '$'+(n/1e6).toFixed(2)+'M';
+  if(n>=1e3) return '$'+(n/1e3).toFixed(1)+'K';
+  return '$'+n.toFixed(2); }
+function age(iso){ if(!iso) return '?'; var s=(Date.now()-new Date(iso).getTime())/1000;
+  if(s<3600) return Math.floor(s/60)+'m'; if(s<86400) return Math.floor(s/3600)+'h';
+  if(s<86400*90) return Math.floor(s/86400)+'d'; return Math.floor(s/86400/30)+'mo'; }
+function shortAddr(a){ return a ? a.slice(0,4)+'\u2026'+a.slice(-4) : ''; }
+// only allow http(s) URLs into href/src (token metadata is attacker-controlled)
+function safeUrl(u){ return (typeof u==='string' && /^https?:\/\//i.test(u)) ? u : ''; }
+function setIcon(id,url){ var el=$(id); if(!el) return; var u=safeUrl(url);
+  if(u){ el.src=u; el.style.display=''; el.onerror=function(){ el.style.display='none'; }; }
+  else { el.removeAttribute('src'); el.style.display='none'; } }
+function copyMint(){ var m=T.mint; if(!m) return;
+  try{ navigator.clipboard.writeText(m); logLine('mint copied \u2192 '+shortAddr(m),'#3ee89a'); }catch(e){} }
+// social/website/explorer links bar. j = /api/token payload
+function linksBar(j){
+  var m=T.mint||''; var soc=(j.social||{});
+  var items=[]; // {label, url}
+  (soc.socials||[]).forEach(function(s){ var u=safeUrl(s.url); if(u) items.push({label:(s.type||'link'),url:u}); });
+  (soc.websites||[]).forEach(function(w){ var u=safeUrl(w.url); if(u) items.push({label:(w.label||'website'),url:u}); });
+  // always-available explorer / trade links derived from the mint
+  items.push({label:'solscan',   url:'https://solscan.io/token/'+m});
+  items.push({label:'dexscreener',url:'https://dexscreener.com/solana/'+m});
+  items.push({label:'birdeye',   url:'https://birdeye.so/token/'+m+'?chain=solana'});
+  items.push({label:'jupiter',   url:'https://jup.ag/tokens/'+m});
+  if(j.dev) items.push({label:'dev wallet',url:'https://solscan.io/account/'+j.dev});
+  var html=items.map(function(it){
+    return '<a href="'+esc(it.url)+'" target="_blank" rel="noopener noreferrer" '+
+      'style="font-family:\'Share Tech Mono\',monospace;font-size:10px;letter-spacing:1px;color:#ff8a5c;'+
+      'border:1px solid #3a1114;background:#0a0708;padding:3px 8px;text-transform:uppercase">'+esc(it.label)+'</a>';
+  }).join('');
+  return '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:12px">'+html+'</div>';
+}
+
+/* ---------- system log ---------- */
+function logLine(msg, col){ var el=$('bootlog'); if(!el) return;
+  var d=document.createElement('div'); d.style.animation='bootScan .3s';
+  var now=new Date(); var t=String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0')+':'+String(now.getSeconds()).padStart(2,'0');
+  d.innerHTML='<span style="color:#ff2b2b">['+t+']</span> <span style="color:'+(col||'#8a6a63')+'">'+msg+'</span>';
+  el.prepend(d); while(el.childNodes.length>60) el.removeChild(el.lastChild); }
+
+/* ---------- clock ---------- */
+function startClock(){ var pad=function(n){return String(n).padStart(2,'0');};
+  function tick(){ var d=new Date(); var el=$('clock'); if(el) el.textContent=pad(d.getHours())+':'+pad(d.getMinutes())+':'+pad(d.getSeconds()); }
+  tick(); setInterval(tick,1000); }
+
+/* ---------- indicators ---------- */
+function ema(a,p){ var k=2/(p+1),o=[],e=a[0]; for(var i=0;i<a.length;i++){ e=i?a[i]*k+e*(1-k):a[i]; o.push(e);} return o; }
+function smaArr(a,p){ var o=[]; for(var i=0;i<a.length;i++){ if(i<p-1){o.push(null);continue;} var s=0; for(var j=i-p+1;j<=i;j++)s+=a[j]; o.push(s/p);} return o; }
+function bollinger(a,p,m){ var mid=smaArr(a,p),up=[],lo=[]; for(var i=0;i<a.length;i++){ if(mid[i]==null){up.push(null);lo.push(null);continue;} var s=0; for(var j=i-p+1;j<=i;j++)s+=(a[j]-mid[i])*(a[j]-mid[i]); var sd=Math.sqrt(s/p); up.push(mid[i]+m*sd); lo.push(mid[i]-m*sd);} return {mid:mid,up:up,lo:lo}; }
+function rsiArr(cl,p){ var o=new Array(cl.length).fill(null),ag=0,al=0; for(var i=1;i<cl.length;i++){ var ch=cl[i]-cl[i-1],g=Math.max(ch,0),l=Math.max(-ch,0); if(i<=p){ag+=g;al+=l; if(i===p){ag/=p;al/=p;o[i]=100-100/(1+ag/(al||1e-9));}} else {ag=(ag*(p-1)+g)/p;al=(al*(p-1)+l)/p;o[i]=100-100/(1+ag/(al||1e-9));}} return o; }
+function vwapArr(c,v){ var cpv=0,cv=0,o=[]; for(var i=0;i<c.length;i++){ var tp=(c[i][1]+c[i][2]+c[i][3])/3; var vol=v[i].buy+v[i].sell; cpv+=tp*vol; cv+=vol; o.push(cv?cpv/cv:tp);} return o; }
+function indicators(){
+  if(T.ind) return T.ind;
+  var c=T.candles, closes=c.map(function(x){return x[3];});
+  var eF=ema(closes,12), eS=ema(closes,26);
+  var macd=eF.map(function(v,i){return v-eS[i];});
+  var sig=ema(macd,9);
+  var hist=macd.map(function(v,i){return v-sig[i];});
+  T.ind={ closes:closes, ema9:ema(closes,9), ema21:ema(closes,21), bb:bollinger(closes,20,2), rsi:rsiArr(closes,14), vwap:vwapArr(c,T.vols), hist:hist };
+  return T.ind;
+}
+function plot(ctx,px,py,arr,color,w,dash){ ctx.beginPath(); var s=false; for(var i=0;i<arr.length;i++){ if(arr[i]==null)continue; var x=px(i),y=py(arr[i]); s?ctx.lineTo(x,y):(ctx.moveTo(x,y),s=true);} if(dash)ctx.setLineDash(dash); ctx.strokeStyle=color; ctx.lineWidth=w; ctx.stroke(); ctx.setLineDash([]); }
+
+/* ---------- synthetic seed (fallback so it looks alive offline) ---------- */
+function genCandles(n){
+  var p=0.0000030,out=[],vols=[],seed=7;
+  var rnd=function(){ seed=(seed*9301+49297)%233280; return seed/233280; };
+  for(var i=0;i<n;i++){ var drift=1+(i/n)*0.9; var o=p; var vol=0.06*(0.5+rnd());
+    var c=o*(1+(rnd()-0.44)*vol)*(1+drift*0.004);
+    var hi=Math.max(o,c)*(1+rnd()*0.03), lo=Math.min(o,c)*(1-rnd()*0.03);
+    out.push([o,hi,lo,c]);
+    var total=8000*(0.4+rnd()*1.6)*(1+drift*0.35);
+    var bf=c>=o?0.52+rnd()*0.28:0.2+rnd()*0.3;
+    vols.push({buy:total*bf,sell:total*(1-bf)}); p=c; }
+  T.vols=vols; return out;
+}
+function setCandlesFromApi(arr){
+  T.candles=arr.map(function(c){return [c[1],c[2],c[3],c[4]];});
+  T.vols=arr.map(function(c){ var up=c[4]>=c[1]; var vol=c[5]||0; return {buy:vol*(up?0.6:0.4),sell:vol*(up?0.4:0.6)}; });
+  T.ind=null;
+}
+
+/* ---------- multi-pane chart ---------- */
+function drawChart(){
+  var cv=$('priceCanvas'); if(!cv) return; var ctx=cv.getContext('2d');
+  var dpr=window.devicePixelRatio||1, W=cv.offsetWidth, H=cv.offsetHeight;
+  cv.width=W*dpr; cv.height=H*dpr; ctx.setTransform(dpr,0,0,dpr,0,0); ctx.clearRect(0,0,W,H);
+  ctx.font='10px "Share Tech Mono",monospace';
+  if(!T.candles.length){ ctx.fillStyle='#8a6a63'; ctx.fillText(T.mint?'acquiring candles\u2026':'no target locked \u2014 paste a contract address and hit DISCOVER',8,20); return; }
+  var I=indicators(), c=T.candles, vols=T.vols, n=c.length;
+  if(n<5){ /* too few points for a real chart \u2014 show honest state, not stretched EMA lines */
+    ctx.fillStyle='#8a6a63'; ctx.textAlign='center';
+    ctx.fillText(T.mint?('thin data \u2014 only '+n+' candle'+(n===1?'':'s')+' at '+T.tf+' \u00b7 needs more trade activity'):'no target locked \u2014 paste a contract address and hit DISCOVER',W/2,H/2);
+    ctx.textAlign='left'; return; }
+  var padL=6,padR=64,gap=14;
+  var priceH=Math.round(H*0.58), volH=Math.round(H*0.16);
+  var priceTop=4, volTop=priceTop+priceH+gap, rsiTop=volTop+volH+gap, rsiH=H-rsiTop-4;
+  // Bound the column pitch so sparse charts (a fresh token with only a handful
+  // of 15s candles) don't stretch each bar an inch wide across the full width.
+  // Lay out on at least ~15 slots and right-align, so the newest candle sits at
+  // the right edge (birdeye/dexscreener convention) at a sane, fixed width.
+  var slots=Math.max(n-1,14), pitch=(W-padL-padR)/slots;
+  var px=function(i){return W-padR-pitch*(n-1-i);};
+  var hiA=[],loA=[]; for(var i=0;i<n;i++){ hiA.push(c[i][1]); loA.push(c[i][2]); if(I.bb.up[i]!=null){hiA.push(I.bb.up[i]);loA.push(I.bb.lo[i]);} }
+  var y1=Math.max.apply(null,hiA), y0=Math.min.apply(null,loA); var pd=(y1-y0)*0.06||y1*0.01||1; y1+=pd; y0-=pd;
+  var py=function(v){return priceTop+priceH*(1-(v-y0)/((y1-y0)||1));};
+  ctx.strokeStyle='rgba(255,43,43,0.08)'; ctx.lineWidth=1;
+  for(var g=0;g<=4;g++){ var yy=priceTop+priceH*g/4; ctx.beginPath(); ctx.moveTo(padL,yy); ctx.lineTo(W-padR,yy); ctx.stroke(); ctx.fillStyle='#7a6a63'; ctx.fillText('$'+(y1-(y1-y0)*g/4).toPrecision(3),W-padR+5,yy+3); }
+  ctx.beginPath(); var st=false; for(var i=0;i<n;i++){ if(I.bb.up[i]==null)continue; var x=px(i),yv=py(I.bb.up[i]); st?ctx.lineTo(x,yv):(ctx.moveTo(x,yv),st=true);} for(var i=n-1;i>=0;i--){ if(I.bb.lo[i]==null)continue; ctx.lineTo(px(i),py(I.bb.lo[i]));} ctx.closePath(); ctx.fillStyle='rgba(140,106,99,0.10)'; ctx.fill();
+  plot(ctx,px,py,I.bb.mid,'rgba(140,106,99,0.55)',1,[2,3]);
+  var cw=Math.min(18,Math.max(2,pitch*0.62));
+  for(var i=0;i<n;i++){ var o=c[i][0],h=c[i][1],l=c[i][2],cl=c[i][3]; var up=cl>=o; var col=up?'#3ee89a':'#ff3b3b'; var x=px(i);
+    ctx.shadowColor='transparent'; ctx.shadowBlur=0; ctx.shadowOffsetX=0; ctx.shadowOffsetY=0;
+    ctx.strokeStyle=col; ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(x,py(h)); ctx.lineTo(x,py(l)); ctx.stroke();
+    var t=py(Math.max(o,cl)), b=py(Math.min(o,cl));
+    ctx.shadowColor='rgba(0,0,0,0.6)'; ctx.shadowBlur=6; ctx.shadowOffsetX=2.5; ctx.shadowOffsetY=3.5;
+    ctx.fillStyle=col; ctx.fillRect(x-cw/2,t,cw,Math.max(1,b-t));
+    ctx.shadowColor='transparent'; ctx.shadowBlur=0; ctx.shadowOffsetX=0; ctx.shadowOffsetY=0;
+    ctx.fillStyle=up?'rgba(255,255,255,0.22)':'rgba(255,255,255,0.12)'; ctx.fillRect(x-cw/2,t,cw,1); }
+  plot(ctx,px,py,I.vwap,'#ffb020',1.3,[5,3]);
+  plot(ctx,px,py,I.ema9,'#39d0ff',1.4,null);
+  plot(ctx,px,py,I.ema21,'#ff7a1a',1.4,null);
+  var last=c[n-1][3];
+  ctx.strokeStyle='#ffb020'; ctx.setLineDash([3,3]); ctx.beginPath(); ctx.moveTo(padL,py(last)); ctx.lineTo(W-padR,py(last)); ctx.stroke(); ctx.setLineDash([]);
+  ctx.fillStyle='#ffb020'; ctx.fillRect(W-padR,py(last)-8,padR,16); ctx.fillStyle='#0a0708'; ctx.fillText('$'+last.toPrecision(3),W-padR+4,py(last)+3);
+  ctx.fillStyle='#7a6a63'; ctx.fillText('VOL',padL,volTop-3);
+  var maxV=Math.max.apply(null,vols.map(function(v){return v.buy+v.sell;}).concat([1e-9]));
+  for(var i=0;i<n;i++){ var v=vols[i],tot=v.buy+v.sell,bh=volH*(tot/maxV),x=px(i),up=v.buy>=v.sell; ctx.fillStyle=up?'rgba(62,232,160,0.55)':'rgba(255,59,59,0.5)'; ctx.fillRect(x-cw/2,volTop+volH-bh,cw,bh); }
+  ctx.strokeStyle='rgba(255,43,43,0.08)'; ctx.beginPath(); ctx.moveTo(padL,volTop+volH); ctx.lineTo(W-padR,volTop+volH); ctx.stroke();
+  var ry=function(v){return rsiTop+rsiH*(1-v/100);};
+  ctx.fillStyle='#7a6a63'; ctx.fillText('RSI 14',padL,rsiTop-3);
+  ctx.fillStyle='rgba(140,106,99,0.08)'; ctx.fillRect(padL,ry(70),W-padL-padR,ry(30)-ry(70));
+  ctx.setLineDash([3,3]); ctx.strokeStyle='rgba(255,59,59,0.32)'; ctx.beginPath(); ctx.moveTo(padL,ry(70)); ctx.lineTo(W-padR,ry(70)); ctx.stroke();
+  ctx.strokeStyle='rgba(62,232,160,0.32)'; ctx.beginPath(); ctx.moveTo(padL,ry(30)); ctx.lineTo(W-padR,ry(30)); ctx.stroke(); ctx.setLineDash([]);
+  ctx.fillStyle='#7a6a63'; ctx.fillText('70',W-padR+5,ry(70)+3); ctx.fillText('30',W-padR+5,ry(30)+3);
+  plot(ctx,px,ry,I.rsi,'#e9ddd8',1.4,null);
+}
+function buildTech(){
+  var el=$('tech'); if(!el) return;
+  var chip=function(sw,dash,label){ return '<span style="display:flex;align-items:center;gap:6px;font-family:\'Share Tech Mono\',monospace;font-size:10px;letter-spacing:1px;color:#8a6a63"><span style="width:14px;height:0;border-top:2px '+(dash?'dashed':'solid')+' '+sw+'"></span>'+label+'</span>'; };
+  el.innerHTML=chip('#39d0ff',false,'EMA 9')+chip('#ff7a1a',false,'EMA 21')+chip('#ffb020',true,'VWAP')+chip('#8c6a63',false,'BOLL 20,2')+
+    '<span style="flex:1"></span><span style="font-family:\'Share Tech Mono\',monospace;font-size:10px;letter-spacing:1px;color:#7a6a63">PRICE '+T.tf+' \u00b7 VOL \u00b7 RSI 14 \u00b7 <span style="color:#ff8a5c">MMB-DRAG ZOOM</span></span>';
+}
+function buildSignals(){
+  var el=$('signals'); if(!el) return;
+  if(!T.candles.length){ el.innerHTML=''; return; }
+  var I=indicators(), n=I.closes.length-1, c=I.closes[n];
+  if(n<20){ el.innerHTML='<div style="grid-column:1/-1;padding:12px;color:#8a6a63;font-size:11px">insufficient candles for indicators\u2026</div>'; $('verdict').innerHTML=''; return; }
+  var rsi=I.rsi[n], emaBull=I.ema9[n]>=I.ema21[n], vwapAbove=c>=I.vwap[n], macdUp=I.hist[n]>=0;
+  var bbW=(I.bb.up[n]-I.bb.lo[n])/I.bb.mid[n]*100, squeeze=bbW<14;
+  var buyPct=T.flowBuyPct!=null?T.flowBuyPct:(T.vols[n].buy/(T.vols[n].buy+T.vols[n].sell)*100);
+  var roc=(c-I.closes[n-10])/I.closes[n-10]*100;
+  var cell=function(label,val,col,note){ return '<div style="background:#0a0708;padding:8px 10px"><div style="font-family:\'Share Tech Mono\',monospace;font-size:9px;letter-spacing:1px;color:#7a6a63">'+label+'</div><div style="font-family:\'JetBrains Mono\',monospace;font-size:13px;color:'+col+';font-weight:700;margin:1px 0">'+val+'</div><div style="font-size:9px;color:#6b5a56">'+note+'</div></div>'; };
+  var rs=rsi>70?['OVERBOUGHT',R]:rsi<30?['OVERSOLD',G]:['NEUTRAL',A];
+  el.innerHTML=cell('RSI 14',(rsi==null?'\u2013':rsi.toFixed(0)),rs[1],rs[0])+
+    cell('EMA 9/21',emaBull?'BULLISH':'BEARISH',emaBull?G:R,emaBull?'fast &gt; slow':'fast &lt; slow')+
+    cell('VWAP',vwapAbove?'ABOVE':'BELOW',vwapAbove?G:R,vwapAbove?'buyers in profit':'buyers underwater')+
+    cell('MACD',macdUp?'RISING':'FALLING',macdUp?G:R,'histogram '+(macdUp?'+':'\u2212'))+
+    cell('BOLLINGER',squeeze?'SQUEEZE':'EXPANDED',squeeze?A:G,'width '+bbW.toFixed(1)+'%')+
+    cell('FLOW '+T.tf,buyPct.toFixed(0)+'% BUY',buyPct>=50?G:R,'ROC10 '+(roc>=0?'+':'')+roc.toFixed(1)+'%');
+  var bulls=[emaBull,vwapAbove,macdUp,buyPct>=50,roc>=0,(rsi>=45&&rsi<=72)].filter(Boolean).length;
+  var pct=Math.round(bulls/6*100);
+  var lab=bulls>=4?'LONG BIAS':bulls<=2?'SHORT BIAS':'NEUTRAL', col=bulls>=4?G:bulls<=2?R:A;
+  $('verdict').innerHTML='<div style="display:flex;justify-content:space-between;font-family:\'Share Tech Mono\',monospace;font-size:10px;letter-spacing:1px;color:#7a6a63;margin-bottom:6px"><span>COMPOSITE SIGNAL</span><span style="color:'+col+';font-weight:700">'+lab+' \u00b7 '+bulls+'/6</span></div><div style="height:9px;background:#1a0e0f;border:1px solid #2a0f11;position:relative"><div style="position:absolute;inset:0 '+(100-pct)+'% 0 0;background:linear-gradient(90deg,#5a1518,'+col+')"></div></div>';
+}
+
+/* ---------- market depth from live flow ---------- */
+function buildBookFromFlow(mid, buyUsd, sellUsd){
+  var seed=42; var rnd=function(){ seed=(seed*9301+49297)%233280; return seed/233280; };
+  var L=10, step=mid*0.0045; var bids=[],asks=[]; var cb=0,ca=0;
+  var bScale=(buyUsd||1)/ (L*20), aScale=(sellUsd||1)/(L*20);
+  for(var i=1;i<=L;i++){
+    var sb=(rnd()*20+8)*bScale*((i===4||i===7)?2.2:1); cb+=sb; bids.push({price:mid-step*i,size:sb,cum:cb});
+    var sa=(rnd()*20+8)*aScale*((i===3||i===8)?2.1:1); ca+=sa; asks.push({price:mid+step*i,size:sa,cum:ca});
+  }
+  return {bids:bids,asks:asks,cb:cb,ca:ca,mid:mid,step:step,L:L};
+}
+function drawDepth(){
+  var cv=$('depthCanvas'); if(!cv||!T.book) return;
+  var dpr=window.devicePixelRatio||1, W=cv.offsetWidth, H=cv.offsetHeight;
+  cv.width=W*dpr; cv.height=H*dpr; var ctx=cv.getContext('2d'); ctx.setTransform(dpr,0,0,dpr,0,0); ctx.clearRect(0,0,W,H);
+  var ob=T.book, mid=ob.mid; var range=ob.step*(ob.L+0.5), padT=6, padB=4, maxCum=Math.max(ob.cb,ob.ca,1e-9);
+  var xF=function(p){return W*((p-(mid-range))/(2*range));}, yF=function(c){return H-padB-(H-padB-padT)*(c/maxCum);};
+  ctx.beginPath(); ctx.moveTo(xF(mid),H-padB); ob.bids.forEach(function(b){ctx.lineTo(xF(b.price),yF(b.cum));}); ctx.lineTo(xF(ob.bids[ob.bids.length-1].price),H-padB); ctx.closePath(); ctx.fillStyle='rgba(62,232,160,0.16)'; ctx.fill();
+  ctx.beginPath(); ctx.moveTo(xF(mid),H-padB); ob.bids.forEach(function(b){ctx.lineTo(xF(b.price),yF(b.cum));}); ctx.strokeStyle='#3ee89a'; ctx.lineWidth=1.4; ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(xF(mid),H-padB); ob.asks.forEach(function(a){ctx.lineTo(xF(a.price),yF(a.cum));}); ctx.lineTo(xF(ob.asks[ob.asks.length-1].price),H-padB); ctx.closePath(); ctx.fillStyle='rgba(255,59,59,0.15)'; ctx.fill();
+  ctx.beginPath(); ctx.moveTo(xF(mid),H-padB); ob.asks.forEach(function(a){ctx.lineTo(xF(a.price),yF(a.cum));}); ctx.strokeStyle='#ff3b3b'; ctx.lineWidth=1.4; ctx.stroke();
+  ctx.strokeStyle='rgba(255,176,32,0.65)'; ctx.setLineDash([3,3]); ctx.beginPath(); ctx.moveTo(xF(mid),padT); ctx.lineTo(xF(mid),H-padB); ctx.stroke(); ctx.setLineDash([]);
+}
+function buildDepthUI(){
+  if(!T.book) return; var ob=T.book, mid=ob.mid;
+  var stats=$('depthStats'); var imb=ob.cb/(ob.cb+ob.ca+1e-9)*100;
+  if(stats) stats.innerHTML='<span style="color:#3ee89a">BUY '+fmtUsd(ob.cb)+'</span><span style="color:#7a6a63">IMBALANCE <b style="color:'+(imb>=50?'#3ee89a':'#ff5a5f')+'">'+imb.toFixed(0)+'% BUY</b></span><span style="color:#ff5a5f">SELL '+fmtUsd(ob.ca)+'</span>';
+  var lad=$('ladder'); if(!lad) return;
+  var maxSz=Math.max.apply(null,ob.bids.map(function(b){return b.size;}).concat(ob.asks.map(function(a){return a.size;})).concat([1e-9]));
+  var row=function(o,ask){ var col=ask?'#ff5a5f':'#3ee89a'; var bg=ask?'rgba(255,59,59,0.14)':'rgba(62,232,160,0.14)'; var w=o.size/maxSz*100;
+    return '<div style="position:relative;display:flex;justify-content:space-between;padding:2px 7px;font-family:\'JetBrains Mono\',monospace;font-size:10px"><div style="position:absolute;top:0;bottom:0;'+(ask?'right':'left')+':0;width:'+w+'%;background:'+bg+'"></div><span style="position:relative;color:'+col+'">$'+o.price.toPrecision(3)+'</span><span style="position:relative;color:#8a6a63">'+fmtUsd(o.size).replace('$','')+'</span></div>'; };
+  var asks=ob.asks.slice(0,6).reverse().map(function(a){return row(a,true);}).join('');
+  var bids=ob.bids.slice(0,6).map(function(b){return row(b,false);}).join('');
+  lad.innerHTML=asks+'<div style="text-align:center;padding:3px 0;font-family:\'JetBrains Mono\',monospace;font-size:11px;color:#ffb020;border-top:1px solid #2a0f11;border-bottom:1px solid #2a0f11">$'+mid.toPrecision(4)+'</div>'+bids;
+}
+
+/* ---------- small line charts (dashboard) ---------- */
+function lineChart(id,pts,color){
+  var cv=$(id); if(!cv) return; var dpr=window.devicePixelRatio||1, W=cv.offsetWidth, H=cv.offsetHeight;
+  cv.width=W*dpr; cv.height=H*dpr; var ctx=cv.getContext('2d'); ctx.setTransform(dpr,0,0,dpr,0,0); ctx.clearRect(0,0,W,H);
+  if(!pts.length){ return; }
+  var y0=Math.min.apply(null,pts.concat([0])), y1=Math.max.apply(null,pts.concat([0])); if(y0===y1){y0-=1;y1+=1;}
+  var px=function(i){return 4+(W-8)*(i/((pts.length-1)||1));}, py=function(v){return 6+(H-12)*(1-(v-y0)/((y1-y0)||1));};
+  if(y0<0&&y1>0){ ctx.strokeStyle='rgba(255,43,43,0.18)'; ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(0,py(0)); ctx.lineTo(W,py(0)); ctx.stroke(); }
+  var grad=ctx.createLinearGradient(0,0,0,H); grad.addColorStop(0,color+'55'); grad.addColorStop(1,color+'00');
+  ctx.beginPath(); pts.forEach(function(v,i){ i?ctx.lineTo(px(i),py(v)):ctx.moveTo(px(i),py(v)); }); ctx.lineTo(px(pts.length-1),H); ctx.lineTo(px(0),H); ctx.closePath(); ctx.fillStyle=grad; ctx.fill();
+  ctx.beginPath(); pts.forEach(function(v,i){ i?ctx.lineTo(px(i),py(v)):ctx.moveTo(px(i),py(v)); }); ctx.strokeStyle=color; ctx.lineWidth=1.6; ctx.stroke();
+  var lx=px(pts.length-1), ly=py(pts[pts.length-1]); ctx.fillStyle=color; ctx.beginPath(); ctx.arc(lx,ly,2.4,0,7); ctx.fill();
+}
+
+/* ---------- zoom ---------- */
+function wireZoom(){
+  var wrap=$('chartWrap'), cv=$('priceCanvas'); if(!wrap||!cv||wrap._zw) return; wrap._zw=1;
+  var drag=false, sy=0, z0=1;
+  var badge=$('zoomBadge');
+  var show=function(){ if(badge){ badge.textContent='ZOOM '+T.zoom.toFixed(2)+'\u00d7'; badge.style.opacity='1'; clearTimeout(T._zt); T._zt=setTimeout(function(){badge.style.opacity='0';},900);} };
+  wrap.addEventListener('mousedown',function(e){ if(e.button!==1)return; e.preventDefault(); drag=true; sy=e.clientY; z0=T.zoom; document.body.style.cursor='ns-resize'; });
+  window.addEventListener('mousemove',function(e){ if(!drag)return; T.zoom=Math.max(0.6,Math.min(2.6,z0+(sy-e.clientY)/240)); cv.style.height=Math.round(T.base*T.zoom)+'px'; drawChart(); show(); });
+  window.addEventListener('mouseup',function(){ if(drag){drag=false; document.body.style.cursor='';} });
+  wrap.addEventListener('auxclick',function(e){ if(e.button===1)e.preventDefault(); });
+}
+
+/* ---------- fee mode ----------
+   mev/fast/eco map 1:1 onto the server's FEE_MODES. `mev` is still sent
+   alongside feeMode so an older server (or the EVM path, which ignores
+   feeMode entirely) keeps behaving exactly as before. */
+// Ceilings, not prices. Jupiter estimates the priority fee and the cap only
+// bites under congestion — measured on a calm book 2026-08-09, one SOL→USDC
+// build: MEV 10,000 lamports of tip, FAST 72, ECO 0. The tip is the only one
+// with a FLOOR (2,000 lamports), so MEV is never the cheapest.
+var FEE_NOTE={
+  mev :'Jito tip, no priority fee. Sandwich-resistant. Tip floor 2,000 lamports, ceiling 0.0003 ◎ — the only mode you always pay for.',
+  fast:'Priority fee "high", ceiling 0.002 ◎. Usually far under that; the ceiling only bites when the network is congested.',
+  eco :'Priority fee "medium", ceiling 0.00005 ◎ — can be 0 on a calm book. Cheapest, and the most likely to miss a fast dump.'
+};
+function paintFee(){
+  Array.prototype.forEach.call(document.querySelectorAll('.feeM'),function(b){
+    var on=b.getAttribute('data-m')===T.feeMode;
+    b.style.background=on?'#2a0f11':'#0d090a';
+    b.style.color=on?'#ff8a5c':'#7a6a63';
+    b.style.borderColor=on?'#5a1518':'#3a1014';
+  });
+  if($('feeNote')) $('feeNote').textContent=FEE_NOTE[T.feeMode]||'';
+}
+
+/* ---------- visibility-gated polling ----------
+   Every refresher below runs on a timer whether or not anyone is looking, and
+   /api/holdings is now a TRADE-class read on the scarce key. Sitting on gmgn
+   with this tab open in the background was therefore spending the Helius
+   budget on a panel nobody could see.
+
+   document.hidden is the honest signal — a server-side "is the UI active"
+   check cannot work, because every poll IS a request and would keep resetting
+   its own idle timer forever. On return each poller fires immediately so the
+   screen is never stale-but-silent; the pull is what refreshes it, so this
+   trades background spend for one burst on focus, not for wrong numbers. */
+var POLLS=[];
+function poll(fn,ms){ POLLS.push({fn:fn,ms:ms,id:null}); }
+function pollsStart(){
+  POLLS.forEach(function(p){ if(p.id===null) p.id=setInterval(p.fn,p.ms); });
+}
+function pollsStop(){
+  POLLS.forEach(function(p){ if(p.id!==null){ clearInterval(p.id); p.id=null; } });
+}
+function wirePollVisibility(){
+  document.addEventListener('visibilitychange',function(){
+    if(document.hidden){ pollsStop(); }
+    else { POLLS.forEach(function(p){ try{ p.fn(); }catch(e){} }); pollsStart(); }
+  });
+  if(!document.hidden) pollsStart();   // a tab opened in the background stays idle
+}
+
+/* sent_via=="rpc" means OUR endpoint (RPC_URL first, public only as failover) —
+   the log used to render that as "public rpc", which was already loose and
+   becomes actively wrong now that FAST and ECO always come back as "rpc". */
+function sentVia(j){
+  var v=(j.sent_via==='jito'?'jito':'rpc')+(j.fee_mode?' · '+esc(j.fee_mode):'');
+  return v+(j.fee_cap_sol!=null?' ≤'+j.fee_cap_sol+'◎':'');
+}
+
+/* ---------- fire control ---------- */
+function buildButtons(){
+  var buys=$('buys');
+  [0.05,0.1,0.25,0.5,1].forEach(function(a){ var b=document.createElement('button');
+    b.textContent=a+' \u25ce'; b.className='fireBtn';
+    b.style.cssText='padding:12px 6px;font-family:\'Share Tech Mono\',monospace;font-size:13px;letter-spacing:1px;background:#0c1f16;color:#3ee89a;border:1px solid #1f5a3f;cursor:pointer;clip-path:polygon(0 0,calc(100% - 8px) 0,100% 8px,100% 100%,8px 100%,0 calc(100% - 8px))';
+    b.onmouseenter=function(){b.style.background='#123424';}; b.onmouseleave=function(){b.style.background='#0c1f16';};
+    b.onclick=function(){ fire('buy',{sol:a},'BUY '+a+' SOL'); }; buys.appendChild(b); });
+  var sells=$('sells');
+  [25,50,75,100].forEach(function(p){ var b=document.createElement('button');
+    b.textContent=p+'%'; b.className='fireBtn';
+    b.style.cssText='padding:12px 6px;font-family:\'Share Tech Mono\',monospace;font-size:13px;letter-spacing:1px;background:#2a0d10;color:#ff5a5f;border:1px solid #5a1518;cursor:pointer;clip-path:polygon(0 0,calc(100% - 8px) 0,100% 8px,100% 100%,8px 100%,0 calc(100% - 8px))';
+    b.onmouseenter=function(){b.style.background='#3d1319';}; b.onmouseleave=function(){b.style.background='#2a0d10';};
+    b.onclick=function(){ fire('sell',{pct:p},'SELL '+p+'%'); }; sells.appendChild(b); });
+  var cb=$('cbuyIn'); if(cb) cb.addEventListener('keydown',function(e){ if(e.key==='Enter'){ var a=parseFloat(cb.value); if(a>0) fire('buy',{sol:a},'BUY '+a+' SOL'); } });
+  if($('holdPop')) $('holdPop').onclick=function(ev){ popoutSell(ev); };
+  paintFee();
+  Array.prototype.forEach.call(document.querySelectorAll('.feeM'),function(b){
+    b.onclick=function(){ T.feeMode=b.getAttribute('data-m'); T.mev=(T.feeMode==='mev');
+      try{ localStorage.setItem('t8_feeMode',T.feeMode); }catch(e){}
+      paintFee(); logLine('FEE MODE \u2192 '+T.feeMode.toUpperCase(),'#ffb020'); };
+  });
+  $('slLbl').onclick=function(){ T.dynSlip=!T.dynSlip; $('slBox').style.background=T.dynSlip?'#ff2b2b':'#070506'; $('slLbl').style.color=T.dynSlip?'#e9ddd8':'#7a6a63'; };
+}
+function setBusy(v){ T.busy=v; document.querySelectorAll('.fireBtn').forEach(function(b){ b.disabled=v; b.style.opacity=v?'0.45':'1'; }); }
+async function fire(kind, body, label){
+  if(T.busy||!T.mint){ if(!T.mint) logLine('NO TARGET LOCKED','#ff5a5f'); return; }
+  if(T.evm){ return fireEvm(kind, kind==='buy'?(body.sol):(body.pct)); }
+  setBusy(true); logLine(label+' \u2014 SENDING\u2026','#ffb020');
+  try{
+    var slip=Math.round(parseFloat($('slipIn').value||'3')*100);
+    var payload=Object.assign({mint:T.mint,slippageBps:slip,mev:T.mev,feeMode:T.feeMode,dynSlip:T.dynSlip},body);
+    var j=await jpost('/api/'+kind,payload);
+    if(j.signature){
+      if(j.status==='submitted'){
+        // fast-ack: tx is SENT (~1s) \u2014 buttons free now; landed status follows
+        logLine(label+' \u2192 <b style="color:#ffb020">SENT</b> '+(j.elapsed_s||'')+'s via '+sentVia(j)+(j.solscan?' <a href="'+esc(j.solscan)+'" target="_blank">solscan</a>':'')+' \u2014 confirming\u2026','#ffb020');
+        pollTx(j.signature,label,j.solscan);
+      } else {
+        logLine(label+' \u2192 <b style="color:'+(j.ok?'#3ee89a':'#ff5a5f')+'">'+esc(j.status)+'</b> '+(j.elapsed_s||'')+'s via '+sentVia(j)+(j.solscan?' <a href="'+esc(j.solscan)+'" target="_blank">solscan</a>':'')+(j.error?' \u2014 '+esc(j.error):''), j.ok?'#3ee89a':'#ff5a5f');
+      }
+    }
+    else { var _x=explainSendErr(j.error||'unknown'); logLine(label+' <b style="color:#ff5a5f">FAILED</b> — '+esc(_x.t)+(_x.hint?' <span style="color:#7a6a63">('+esc(_x.hint)+')</span>':''),'#ff5a5f'); }
+  }catch(e){ logLine(label+' ERROR: '+esc(e),'#ff5a5f'); }
+  setBusy(false);
+  if(T.mint) loadToken(T.mint,true); refreshHoldings(); refreshDashboard();
+}
+async function pollTx(sig,label,scan){
+  for(var i=0;i<50;i++){
+    await new Promise(function(r){ setTimeout(r,600); });
+    try{
+      var s=await jget('/api/tx/'+sig);
+      if(s.status==='confirmed'||s.status==='failed'){
+        var ok=s.status==='confirmed';
+        logLine(label+' \u2192 <b style="color:'+(ok?'#3ee89a':'#ff5a5f')+'">'+s.status.toUpperCase()+'</b>'+(scan?' <a href="'+esc(scan)+'" target="_blank">solscan</a>':'')+txFailDetail(ok,s), ok?'#3ee89a':'#ff5a5f');
+        if(T.mint) loadToken(T.mint,true); refreshHoldings(); refreshDashboard();
+        return;
+      }
+    }catch(e){}
+  }
+  logLine(label+' \u2014 confirm poll timed out, check solscan','#ff5a5f');
+}
+
+/* ---------- token / threat ---------- */
+async function loadToken(ca, quiet){
+  if(!ca) return; T.mint=ca; T.evm=EVM_RE.test(ca);
+  try{ localStorage.setItem('t8_lastMint',ca); }catch(e){}
+  if($('dslink')) $('dslink').href='https://dexscreener.com/'+(T.evm?'':'solana/')+ca;
+  if($('belink')) $('belink').href='https://birdeye.so/token/'+ca+'?chain=solana';
+  startChart(ca);
+  if(!quiet) logLine('TARGET LOCK \u2192 '+shortAddr(ca)+' \u2014 running threat assessment','#ff5a5f');
+  try{
+    var j=await jget('/api/token/'+ca);
+    if(!j.ok){ logLine('LOAD FAILED: '+esc(j.error),'#ff5a5f'); return; }
+    T.evm=!!j.evm;
+    if(j.evm){
+      if($('dslink')) $('dslink').href='https://dexscreener.com/'+j.chain+'/'+ca;
+      if($('belink')&&j.gt_net&&j.pool) $('belink').href='https://www.geckoterminal.com/'+j.gt_net+'/pools/'+j.pool;
+      logLine(evmTradeable(j.chain)
+        ? ('EVM TOKEN — '+esc((j.chain||'?').toUpperCase())+' · TRADEABLE (unlock EVM wallet, then BUY/SELL)')
+        : ('EVM TOKEN — '+esc((j.chain||'?').toUpperCase())+' · VIEW-ONLY (no verified router on this chain)'),'#ffb020');
+    }
+    T.sym=j.symbol||shortAddr(ca);
+    $('chSym').textContent=T.sym;
+    setIcon('chIcon',j.icon);
+    $('chLock').innerHTML='&#9873; LOCKED'; $('chLock').style.color='#ff2b2b';
+    $('chPrice').textContent=j.usdPrice?('$'+Number(j.usdPrice).toPrecision(6)):'no price';
+    $('fcTarget').textContent='TARGET: '+T.sym+' \u00b7 SLIPPAGE '+($('slipIn').value||'3')+'%';
+    $('threatStatus').innerHTML='&#9679; ANALYSIS COMPLETE'; $('threatStatus').style.color='#3ee89a';
+    renderThreat(j);
+    // separate try: a throw in the liquidity panel must never cost the threat
+    // assessment, which is the one people act on
+    try{ renderLiquidity(j); }
+    catch(e){ logLine('liquidity profile error: '+esc(e),'#ffb020'); }
+  }catch(e){ logLine('threat assessment error: '+esc(e),'#ff5a5f'); }
+}
+function renderThreat(j){
+  var x=j.intel||{};
+  var risk='';
+  if(j.evm){
+    risk+=chipHtml('CHAIN: '+esc((j.chain||'?').toUpperCase()),A,'#5a4a18','#1a1405');
+    if(evmTradeable(j.chain)) risk+=chipHtml('TRADEABLE · EVM',G,'#1f5a3f','#0c1f16');
+    else risk+=chipHtml('VIEW-ONLY · EVM',R,'#5a1518','#2a0d10');
+  } else {
+    if(x.mint_off===false) risk+=chipHtml('MINT AUTH ON',R,'#5a1518','#2a0d10');
+    else risk+=chipHtml('MINT AUTH OFF',G,'#1f5a3f','#0c1f16');
+    if(x.freeze_off===false) risk+=chipHtml('FREEZE ON',R,'#5a1518','#2a0d10');
+    else risk+=chipHtml('FREEZE OFF',G,'#1f5a3f','#0c1f16');
+    if(x.top10pct!=null) risk+=chipHtml('TOP10 '+x.top10pct.toFixed(0)+'%',A,'#5a4a18','#1a1405');
+    if(x.dev_pct!=null) risk+=chipHtml('DEV '+x.dev_pct.toFixed(1)+'%',A,'#5a4a18','#1a1405');
+  }
+  var flowRows='';
+  if(x.stats){ for(var k in x.stats){ var s=x.stats[k]; var tot=(s.bv||0)+(s.sv||0); var ratio=tot>0?(s.bv/tot):null;
+    flowRows+='<tr><td style="text-align:left;color:#7a6a63">'+esc(k)+'</td>'+
+      '<td style="color:'+(s.pc>=0?G:R)+'">'+(s.pc!=null?(s.pc>=0?'+':'')+s.pc.toFixed(1)+'%':'\u2013')+'</td>'+
+      '<td style="color:'+G+'">'+fmtUsd(s.bv)+'</td>'+
+      '<td style="color:'+R+'">'+fmtUsd(s.sv)+'</td>'+
+      '<td style="color:'+(ratio==null?'#6b7387':ratio>=0.5?G:R)+'">'+(ratio==null?'\u2013':(ratio*100).toFixed(0)+'%')+'</td>'+
+      '<td>'+(s.nb!=null?s.nb:'\u2013')+'</td></tr>'; } }
+  var iconUrl=safeUrl(j.icon);
+  var avatar=iconUrl
+    ? '<img src="'+esc(iconUrl)+'" alt="" onerror="this.style.display=\'none\'" style="width:44px;height:44px;border-radius:50%;border:1px solid #5a1518;object-fit:cover;flex:none;background:#0a0708">'
+    : '<div style="width:44px;height:44px;border-radius:50%;border:1px solid #3a1114;background:#0a0708;display:flex;align-items:center;justify-content:center;color:#7a6a63;font-family:\'Orbitron\',sans-serif;font-size:16px;flex:none">'+esc((j.symbol||'?').slice(0,2))+'</div>';
+  $('threatBody').innerHTML=
+    '<div style="display:flex;align-items:center;gap:12px">'+avatar+
+      '<div style="min-width:0">'+
+        '<div style="display:flex;align-items:baseline;gap:10px">'+
+          '<span style="font-family:\'Orbitron\',sans-serif;font-weight:700;font-size:26px;color:#e9ddd8;letter-spacing:1px">'+esc(j.symbol)+'</span>'+
+          (j.verified?'<span style="color:#3ee89a;font-size:14px">\u2713</span>':'')+
+          '<span style="color:#8a6a63;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(j.name||'')+'</span></div>'+
+        '<div style="font-family:\'JetBrains Mono\',monospace;font-size:11px;color:#7a6a63;margin-top:3px;cursor:pointer" onclick="copyMint()" title="copy mint">'+esc(shortAddr(j.mint))+' \u29c9</div>'+
+      '</div></div>'+
+    '<div style="font-family:\'JetBrains Mono\',monospace;color:#ffb020;font-size:15px;margin-top:2px">'+(j.usdPrice?'$'+Number(j.usdPrice).toPrecision(6):'no price')+'</div>'+
+    (j.evm?'':'<div style="margin-top:4px;font-size:12px;color:#e9ddd8">holding: <b>'+(Number(j.balance||0)).toLocaleString()+'</b> <span style="color:#7a6a63">'+(j.balance_usd?'(~$'+j.balance_usd.toFixed(2)+')':'')+'</span></div>'+
+    '<div style="font-size:12px;color:#7a6a63">wallet SOL: '+(j.sol_balance!=null?j.sol_balance.toFixed(4):'?')+' \u25ce</div>')+
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:1px;background:#2a0f11;border:1px solid #2a0f11;margin-top:12px">'+
+      cellHtml('MARKET CAP',fmtUsd(x.mcap),'#ffb020')+cellHtml('LIQUIDITY',fmtUsd(x.liquidity),'#ffb020')+
+      cellHtml('HOLDERS',(x.holders!=null?x.holders.toLocaleString():'?'),'#e9ddd8')+cellHtml('AGE',age(x.createdAt)+(x.launchpad?' \u00b7 '+esc(x.launchpad):''),'#e9ddd8')+
+    '</div>'+
+    '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px">'+risk+'</div>'+
+    linksBar(j)+
+    (flowRows?('<div style="font-family:\'Share Tech Mono\',monospace;font-size:10px;letter-spacing:2px;color:#ff5a5f;margin-top:14px;padding-bottom:6px;border-bottom:1px solid #2a0f11">ORDER FLOW // BY WINDOW</div>'+
+    '<table style="width:100%;font-family:\'JetBrains Mono\',monospace;font-size:11px;margin-top:6px;text-align:right;border-collapse:collapse"><tr style="color:#7a6a63;font-size:10px"><td style="text-align:left;padding:3px 0"></td><td>&#916;PX</td><td>BUY</td><td>SELL</td><td>B%</td><td>NET</td></tr>'+flowRows+'</table>'):'');
+}
+/* ---------- LIQUIDITY PROFILE ----------
+   Reads the intel payload /api/token already returns — no extra request, no
+   extra RPC. mcap, liquidity and per-window buy/sell volume are all in there.
+
+   WHAT IT IS FOR: mcap on its own says nothing about whether you can get OUT.
+   A $2M "market cap" sitting on a $9k pool is a number, not money. These are
+   the ratios that decide whether a position is exitable and whether the
+   activity behind it is real.
+
+   HONEST ABOUT THE BANDS: the thresholds below are reasoned starting points,
+   NOT edges measured on your fills. They are deliberately visible (every raw
+   ratio is printed next to its bar) so the grade never has to be taken on
+   faith, and so they can be recalibrated from trade_context.jsonl once there
+   are enough trades to say anything. Treat the letter as a summary of the four
+   numbers, not as an independent opinion. */
+function _n(v){ v=Number(v); return isFinite(v)?v:null; }
+
+function liqMetrics(j){
+  var x=(j&&j.intel)||{}, s=x.stats||{};
+  var mcap=_n(x.mcap), liq=_n(x.liquidity);
+  // Jupiter reports buy/sell volume separately; the dexscreener fallback gives
+  // only a total. Prefer the explicit total when it is there.
+  function vol(k){ var w=s[k]; if(!w) return null;
+    if(_n(w.vol)!=null) return _n(w.vol);
+    var b=_n(w.bv), v=_n(w.sv);
+    if(b==null && v==null) return null;
+    return (b||0)+(v||0); }
+  function buyShare(k){ var w=s[k]; if(!w) return null;
+    var b=_n(w.bv)||0, v=_n(w.sv)||0, t=b+v; return t>0?b/t:null; }
+  var v5=vol('5m'), v1h=vol('1h'), v24=vol('24h');
+  var m=[];
+
+  // DEPTH — ABSOLUTE pool size. This is what actually bounds an exit, and it
+  // has to be scored on its own before any ratio.
+  //
+  // The ratio alone is a trap, and checking it against real tokens is what
+  // exposed that: BONK ($718k pool, one of the deepest memecoin books on
+  // Solana) prices out at 0.33% liq/mcap and would grade "critical", while a
+  // dying FROGGY with a $714 pool prices out at 25% and would grade "deep" —
+  // because its cap had collapsed DOWN to the pool. Both readings are
+  // backwards. liq/mcap is scale-dependent; dollars are not.
+  m.push({key:'DEPTH', sub:'pool size', raw:liq,
+    txt:liq==null?'?':fmtUsd(liq),
+    score:liq==null?null:liq>=250000?1:liq>=75000?0.85:liq>=20000?0.6:liq>=5000?0.3:0.05,
+    note:liq==null?'':liq>=250000?'deep':liq>=75000?'good':liq>=20000?'fair':liq>=5000?'thin':'critical'});
+
+  // FLOAT — liq/mcap, i.e. how much of the nominal cap is air. Only meaningful
+  // once you know the scale, so it is read differently for large caps (where a
+  // low ratio is simply what a big token looks like) and for small ones (where
+  // it is the classic thin-pool-holding-up-a-big-number profile). A very HIGH
+  // ratio is its own tell: the cap has fallen to meet the pool.
+  var flt=(mcap&&liq)?liq/mcap:null;
+  var big=(mcap||0)>=10000000;
+  m.push({key:'FLOAT', sub:'liq / mcap', raw:flt,
+    txt:flt==null?'?':(flt*100).toFixed(2)+'%',
+    score:flt==null?null
+      :flt>=0.25?0.35
+      :flt>=0.02?0.9
+      :flt>=0.005?(big?0.8:0.5)
+      :(big?0.7:0.15),
+    note:flt==null?''
+      :flt>=0.25?'collapsed?'
+      :flt>=0.02?'healthy'
+      :flt>=0.005?(big?'large-cap normal':'thin float')
+      :(big?'large-cap normal':'mostly air')});
+
+  // CHURN — 24h turnover of the pool. NOT monotone: dead is bad, and so is
+  // frenzied, which is where wash volume and exit liquidity illusions live.
+  var churn=(v24&&liq)?v24/liq:null;
+  m.push({key:'CHURN', sub:'vol24 / liq', raw:churn,
+    txt:churn==null?'?':churn.toFixed(1)+'x',
+    score:churn==null?null:churn<0.5?0.2:churn<3?0.7:churn<15?1:churn<40?0.6:0.3,
+    note:churn==null?'':churn<0.5?'dead':churn<3?'steady':churn<15?'hot':churn<40?'frenzied':'wash risk'});
+
+  // ACCEL — is the last 5 minutes running above the hour's own pace? This is
+  // the breakout tell, and it is why 5m volume alone is useless: 5m volume is
+  // only "high" relative to what this token was already doing.
+  var pace=(v1h!=null)?v1h*5/60:null;
+  var accel=(v5!=null&&pace)?v5/pace:null;
+  m.push({key:'ACCEL', sub:'5m vs 1h pace', raw:accel,
+    txt:accel==null?'?':accel.toFixed(2)+'x',
+    score:accel==null?null:accel<0.5?0.2:accel<1?0.5:accel<2?0.8:1,
+    note:accel==null?'':accel<0.5?'fading':accel<1?'cooling':accel<2?'building':'accelerating'});
+
+  // FLOW — buy share of 5m volume. Very one-sided is not automatically good;
+  // it is often what the top looks like.
+  var bs=buyShare('5m');
+  m.push({key:'FLOW', sub:'buy share 5m', raw:bs,
+    txt:bs==null?'?':(bs*100).toFixed(0)+'%',
+    score:bs==null?null:bs<0.4?0.2:bs<0.55?0.6:bs<0.7?0.9:0.8,
+    note:bs==null?'':bs<0.4?'sell-heavy':bs<0.55?'balanced':bs<0.7?'buy-led':'one-sided'});
+
+  // THE LETTER GRADES LIQUIDITY ONLY — DEPTH, FLOAT, CHURN.
+  //
+  // ACCEL and FLOW are momentum, and folding them in made the grade lie: BONK
+  // came out C purely for being quiet, which is not a liquidity problem. A
+  // token can be perfectly exitable and going nowhere; those are two different
+  // questions and a trader answers them separately. Momentum still renders (it
+  // is what breakout entries key off) — it just does not move the letter.
+  var W={DEPTH:0.35, FLOAT:0.15, CHURN:0.20};
+  var sum=0, wsum=0;
+  m.forEach(function(r){
+    if(W[r.key]!=null && r.score!=null){ sum+=r.score*W[r.key]; wsum+=W[r.key]; }
+    r.momentum = (W[r.key]==null);
+  });
+  var total=0.70;                                   // = 0.35 + 0.15 + 0.20
+  var overall=wsum>0?sum/wsum:null;
+  return {metrics:m, overall:overall, liq:liq, mcap:mcap, v24:v24,
+          // coverage matters: a "B" computed from one of three inputs is not a B
+          covered:wsum>0?wsum/total:0};
+}
+
+function liqBar(score){
+  if(score==null) return '<span style="color:#5a4a45">no data</span>';
+  var n=Math.round(score*10), col=score>=0.8?G:score>=0.5?A:R, out='';
+  for(var i=0;i<10;i++) out+='<span style="color:'+(i<n?col:'#2a1a1c')+'">&#9646;</span>';
+  return out;
+}
+
+function renderLiquidity(j){
+  var r=liqMetrics(j);
+  var g=$('liqGrade');
+  if(r.overall==null){
+    g.textContent='—'; g.style.color='#8a6a63';
+    $('liqBody').innerHTML='<div style="color:#8a6a63;font-family:\'Share Tech Mono\',monospace;'+
+      'font-size:12px;padding:14px 0;text-align:center">NO LIQUIDITY DATA FOR THIS TOKEN</div>';
+    return;
+  }
+  var letter=r.overall>=0.85?'A':r.overall>=0.70?'B':r.overall>=0.55?'C':r.overall>=0.40?'D':'F';
+  var gcol=r.overall>=0.70?G:r.overall>=0.55?A:R;
+  g.textContent=letter; g.style.color=gcol;
+
+  var row=function(x){
+    return '<tr>'+
+      '<td style="color:#e9ddd8;font-family:\'Share Tech Mono\',monospace;font-size:11px;letter-spacing:1px;padding:4px 0">'+x.key+'</td>'+
+      '<td style="color:#7a6a63;font-size:10px;padding-left:6px">'+x.sub+'</td>'+
+      '<td style="color:'+A+';font-family:\'JetBrains Mono\',monospace;font-size:12px;text-align:right;padding-left:8px">'+x.txt+'</td>'+
+      '<td style="padding-left:10px;font-size:11px;line-height:1">'+liqBar(x.score)+'</td>'+
+      '<td style="color:#7a6a63;font-size:10px;padding-left:8px">'+x.note+'</td></tr>';
+  };
+  var liqRows=r.metrics.filter(function(x){return !x.momentum;}).map(row).join('');
+  var momRows=r.metrics.filter(function(x){return x.momentum;}).map(row).join('');
+  var rows=liqRows+
+    (momRows?'<tr><td colspan="5" style="padding:9px 0 3px"><span style="font-family:\'Share Tech Mono\',monospace;'+
+      'font-size:9px;letter-spacing:2px;color:#7a6a63">MOMENTUM &#183; DOES NOT AFFECT GRADE</span></td></tr>'+momRows:'');
+
+  // EXIT IMPACT — the practical question the ratios are a proxy for. Constant
+  // product: selling X against a pool whose quote side is ~liq/2 moves price
+  // roughly X/(liq/2). Rough on purpose; it is an order of magnitude, not a
+  // quote, and it ignores routing across multiple pools.
+  var half=r.liq?r.liq/2:null, impact='';
+  if(half){
+    var sizes=[], unit;
+    if(SOLUSD){ sizes=[0.1,0.5,1,2].map(function(s){return {lbl:s+' ◎', usd:s*SOLUSD};}); unit='';}
+    else { sizes=[100,500,1000,2000].map(function(s){return {lbl:'$'+s, usd:s};}); }
+    var hold=_n(j.balance_usd);
+    if(hold&&hold>1) sizes.push({lbl:'your bag', usd:hold});
+    impact='<div style="font-family:\'Share Tech Mono\',monospace;font-size:10px;letter-spacing:2px;'+
+      'color:#ff5a5f;margin-top:12px;padding-bottom:5px;border-bottom:1px solid #2a0f11">'+
+      'EXIT IMPACT // ROUGH</div><div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:7px">'+
+      sizes.map(function(s){
+        var pct=s.usd/half*100;
+        var c=pct<1?G:pct<5?A:R;
+        return '<div style="font-family:\'JetBrains Mono\',monospace;font-size:11px">'+
+          '<span style="color:#7a6a63">'+esc(s.lbl)+'</span> '+
+          '<b style="color:'+c+'">'+(pct<0.01?'<0.01':pct.toFixed(pct<1?2:1))+'%</b></div>';
+      }).join('')+'</div>';
+  }
+
+  var thin = r.covered<0.99
+    ? '<div style="color:'+A+';font-size:10px;margin-top:8px">partial data — grade computed from '+
+      Math.round(r.covered*100)+'% of the inputs</div>' : '';
+
+  $('liqBody').innerHTML=
+    '<table style="width:100%;border-collapse:collapse">'+rows+'</table>'+
+    impact+thin+
+    '<div style="color:#5a4a45;font-size:9px;margin-top:10px;line-height:1.5;'+
+    'border-top:1px solid #2a0f11;padding-top:7px">'+
+    'Heuristic bands, not measured edges — they are starting points, and every raw ratio '+
+    'is shown so the letter never has to be taken on faith. Recalibrate from your own fills '+
+    'once trade_context.jsonl has a sample.</div>';
+}
+
+
+/* Shared error wording with the trade box. A landed failure prints as raw JSON
+   otherwise — {"InstructionError":[3,{"Custom":6001}]} — which is a lookup key,
+   not an explanation, and the same number means different things in different
+   programs. The server decodes it from the tx logs; this just renders it. */
+function txFailDetail(ok,s){
+  if(ok) return '';
+  var d=' — '+esc(s.reason||s.error||'rejected on-chain');
+  if(s.name||s.code!=null)
+    d+=' <span style="color:#7a6a63">['+esc(s.name||('error '+s.code))+
+       (s.program_name?' · '+esc(s.program_name):(s.program?' · '+esc(String(s.program).slice(0,8))+'…':''))+']</span>';
+  return d;
+}
+function explainSendErr(e){
+  var s=String(e||'unknown'), low=s.toLowerCase();
+  if(low.indexOf('429')>=0||low.indexOf('rate limit')>=0)
+    return {t:'RATE LIMITED by Jupiter — nothing was sent, no SOL moved. Wait a few seconds and retry.',hint:'check /api/pxdiag'};
+  if(low.indexOf('expecting value')>=0||low.indexOf('non-json')>=0)
+    return {t:'Jupiter returned a non-JSON response (throttle or outage). Nothing was sent.',hint:'retry shortly'};
+  if(low.indexOf('no route')>=0||low.indexOf('not tradable')>=0)
+    return {t:'No routable pool for this token yet — nothing was sent.',hint:'fresh pools take a moment to index'};
+  if(low.indexOf('insufficient')>=0) return {t:'Insufficient SOL for this trade plus fees — nothing was sent.',hint:''};
+  if(low.indexOf('slippage')>=0) return {t:'Slippage exceeded — the price moved past your tolerance.',hint:'raise SLIP% or use MEV'};
+  if(low.indexOf('no balance')>=0) return {t:'No balance to sell — the position may already be closed.',hint:''};
+  return {t:s,hint:''};
+}
+function chipHtml(txt,color,border,bg){ return '<span style="padding:3px 8px;border:1px solid '+border+';color:'+color+';background:'+bg+';font-family:\'Share Tech Mono\',monospace;font-size:10px;letter-spacing:1px">'+txt+'</span>'; }
+function cellHtml(label,val,color){ return '<div style="background:#0a0708;padding:8px 10px"><div style="font-size:10px;letter-spacing:1px;color:#7a6a63">'+label+'</div><div style="color:'+color+';font-size:14px">'+val+'</div></div>'; }
+
+/* ---------- chart timers ---------- */
+function setChartStatus(txt){ var el=$('chStatus'); if(!el) return; if(txt){ el.textContent=txt; el.style.display=''; } else { el.textContent=''; el.style.display='none'; } }
+async function loadChartData(){
+  var ca=T.mint; if(!ca) return;
+  try{
+    var j=await jget('/api/chart/'+ca+'?tf='+T.tf);
+    if(T.mint!==ca) return;
+    if(j.ok && j.candles && j.candles.length){
+      setCandlesFromApi(j.candles.slice(-150)); drawChart(); buildSignals();
+      setChartStatus(j.stale?'\u25c9 data delayed \u2014 rate limited':'');
+    }
+    else if((j.error||'').indexOf('no DEX pool')>=0){ logLine('no DEX pool yet \u2014 order flow needs a pool','#ffb020'); setChartStatus('no DEX pool yet'); }
+    else { setChartStatus('\u25c9 data delayed \u2014 retrying\u2026'); }   /* keep existing candles, don't blank */
+  }catch(e){ setChartStatus('\u25c9 data delayed \u2014 retrying\u2026'); }
+  loadFlow();
+}
+async function loadFlow(){
+  var ca=T.mint; if(!ca) return;
+  try{
+    var j=await jget('/api/flow/'+ca);
+    if(T.mint!==ca||!j.ok) return;
+    renderTape(j);
+    var tot=(j.buy_usd||0)+(j.sell_usd||0);
+    T.flowBuyPct=tot>0?(j.buy_usd/tot*100):null;
+    var mid=T.candles.length?T.candles[T.candles.length-1][3]:1;
+    T.book=buildBookFromFlow(mid,j.buy_usd||0,j.sell_usd||0); drawDepth(); buildDepthUI();
+    buildSignals();
+  }catch(e){}
+}
+function renderTape(j){
+  var el=$('tape'); if(!el) return;
+  var rows=(j.trades||[]).map(function(t){ var buy=t.side==='buy';
+    return '<div style="display:flex;align-items:center;gap:8px;padding:5px 14px;border-bottom:1px solid #160c0d">'+
+      '<span style="width:5px;height:5px;background:'+(buy?G:R)+'"></span>'+
+      '<span style="color:'+(buy?G:R)+';width:34px">'+(buy?'BUY':'SELL')+'</span>'+
+      '<span style="color:#e9ddd8">'+fmtUsd(t.usd)+'</span>'+
+      '<span style="flex:1"></span>'+
+      '<span style="color:#7a6a63">'+new Date(t.ts).toLocaleTimeString()+'</span></div>'; }).join('');
+  el.innerHTML=rows||'<div style="padding:12px;color:#8a6a63;font-size:11px">no recent trades</div>';
+}
+async function priceTick(){
+  var ca=T.mint; if(!ca) return;
+  try{
+    var j=await jget('/api/price/'+ca);
+    if(T.mint!==ca||!j.ok||!T.candles.length) return;
+    var last=T.candles[T.candles.length-1];
+    last[3]=j.price; last[1]=Math.max(last[1],j.price); last[2]=Math.min(last[2],j.price);
+    T.ind=null; drawChart(); buildSignals();
+    if($('chPrice')) $('chPrice').textContent='$'+Number(j.price).toPrecision(6);
+  }catch(e){}
+}
+function startChart(ca){
+  T.candles=[]; T.ind=null; T.tickCount=0; drawChart();
+  loadChartData();
+  if(T.chartTimer) clearInterval(T.chartTimer);
+  T.chartTimer=setInterval(function(){
+    if(!T.mint) return; T.tickCount++;
+    priceTick();
+    if(T.tickCount%2===0) loadFlow();
+    if(T.tickCount%6===0) loadChartData();
+  },5000);
+}
+function buildTFButtons(){
+  var el=$('tfbtns'); if(!el) return; el.innerHTML='';
+  ['15s','1m','5m','15m','1h'].forEach(function(tf){ var b=document.createElement('button'); b.textContent=tf;
+    var on=tf===T.tf;
+    b.style.cssText='padding:3px 8px;font-family:\'Share Tech Mono\',monospace;font-size:10px;letter-spacing:1px;cursor:pointer;border:1px solid '+(on?'#ff2b2b':'#4a1418')+';background:'+(on?'#2a0f11':'#0a0708')+';color:'+(on?'#ff5a5f':'#7a6a63')+';';
+    b.onclick=function(){ T.tf=tf; buildTFButtons(); buildTech(); if(T.mint){ T.candles=[]; drawChart(); loadChartData(); } }; el.appendChild(b); });
+}
+
+/* ---------- dashboard ---------- */
+async function refreshDashboard(){
+  try{ var j=await jget('/api/dashboard'); if(!j.ok) return;
+    var col=function(v){return v>0?G:v<0?R:'#e9ddd8';};
+    var sgn=function(v){return (v>0?'+':'')+Number(v).toFixed(4)+' \u25ce';};
+    var tile=function(l,v,c){return '<div style="background:#070506;border:1px solid #2a0f11;padding:9px 10px"><div style="font-size:10px;letter-spacing:1px;color:#7a6a63">'+l+'</div><b style="color:'+(c||'#e9ddd8')+';font-size:15px">'+v+'</b></div>';};
+    $('dashTiles').innerHTML=
+      tile('EQUITY','$'+Number(j.equity_usd).toFixed(2),'#ffb020')+
+      tile('REALIZED',sgn(j.realized),col(j.realized))+
+      tile('UNREALIZED',sgn(j.unrealized),col(j.unrealized))+
+      tile('WIN RATE',(j.win_rate!=null?j.win_rate+'%':'\u2013'),(j.win_rate>=50?G:R))+
+      tile('TRADES',j.trades+' <span style="color:#7a6a63;font-size:11px">('+j.sells+'s)</span>','#e9ddd8');
+    if(j.equity) lineChart('eqCanvas',j.equity.map(function(e){return e.usd;}),'#ffb020');
+    if(j.pnl_events) lineChart('pnlCanvas',j.pnl_events.map(function(e){return e.cum;}),j.realized>=0?G:R);
+  }catch(e){}
+}
+
+/* ---------- sniper ---------- */
+async function refreshSniper(){
+  try{ var j=await jget('/api/sniper'); if(!j.ok) return;
+    paintRpcBanner(j.flow, j.rpc);
+    var cfg=j.config||{}; var live=!!cfg.live; T.live=live;
+    applyMode(live, j.running);
+    $('snStats').innerHTML='est <b style="color:'+(j.realized_est>0?G:R)+'">'+((j.realized_est!=null)?((j.realized_est>0?'+':'')+j.realized_est+' \u25ce'):'\u2013')+'</b> \u00b7 '+(j.real_closed||0)+' closed'+(j.real_win_rate!=null?(' \u00b7 win <b style="color:'+(j.real_win_rate>=50?G:R)+'">'+j.real_win_rate+'%</b>'):'')+' \u00b7 real(live) <b style="color:'+((j.realized_real_sol||0)>=0?G:R)+'">'+((j.realized_real_sol!=null&&j.real_closed)?((j.realized_real_sol>0?'+':'')+j.realized_real_sol+' \u25ce'):'\u2014')+'</b>';
+    if(document.activeElement!==$('snTarget')) $('snTarget').value=cfg.target||'';
+    setIfIdle('snSol',cfg.sol_per_snipe); setIfIdle('snTp',cfg.tp_pct); setIfIdle('snSl',cfg.sl_pct);
+    setIfIdle('snTimeout',cfg.timeout_min); setIfIdle('snCap',cfg.max_sol_per_day);
+    $('snArmBox').style.background=live?'#ff2b2b':'#070506';
+    /* backend returns newest-first (caps at 60); container scrolls. Held on T
+       so the sleeve toggle can re-render without waiting for the 6s poll. */
+    T.snPos=(j.positions||[]);
+    renderSnPos();
+    try{ renderPyramid(j.pyramid); }catch(e){}
+  }catch(e){}
+}
+
+/* Sleeve split: the sniper proper mirrors the copy target's launches; the
+   graduating sleeve (and pre-`source` legacy rows) ride the same table. */
+var SN_FILT='all';
+function snIsSniper(p){ return (p.source||'')==='copy_target'; }
+function snSleeveTag(p){
+  var s=p.source||'';
+  return s==='copy_target'?'SNP':(s==='graduating'?'GRD':'\u2014');
+}
+function renderSnPos(){
+  var all=T.snPos||[], nS=0;
+  all.forEach(function(p){ if(snIsSniper(p)) nS++; });
+  $('snCntAll').textContent=all.length;
+  $('snCntSniper').textContent=nS;
+  $('snCntOther').textContent=all.length-nS;
+  ['snFAll','snFSnipe','snFOther'].forEach(function(id,i){
+    var on=(SN_FILT===['all','sniper','other'][i]);
+    var el=$(id); if(!el) return;
+    el.style.background=on?'#2a0f11':'#0d090a';
+    el.style.color=on?'#ff8a5c':'#7a6a63';
+    el.style.borderColor=on?'#5a1518':'#3a1014';
+  });
+  var pos=SN_FILT==='all'?all
+    :(SN_FILT==='sniper'?all.filter(snIsSniper)
+                        :all.filter(function(p){ return !snIsSniper(p); }));
+  $('snPos').innerHTML=pos.map(function(p){
+    var isOpen=p.status==='open'; var pnl=p.pnl_sol;
+    var stTxt=isOpen?'\u25cf OPEN':(p.note&&/stop/i.test(p.note)?'STOP':p.note&&/timeout/i.test(p.note)?'T/OUT':'CLOSE');
+    var stC=isOpen?'#ffb020':(pnl<0?R:G);
+    /* sleeve tag only earns its width in the mixed view */
+    var tag=SN_FILT==='all'?(' <span style="color:#5a4a45;font-size:8px">'+snSleeveTag(p)+'</span>'):'';
+    return '<tr style="border-top:1px solid #1a0e0f"><td style="text-align:left;color:#e9ddd8">'+esc(p.symbol||shortAddr(p.mint))+tag+'</td>'+
+      '<td style="color:#7a6a63">'+fmtHM(p.detected_ts)+'</td>'+
+      '<td style="color:'+stC+'">'+stTxt+'</td>'+
+      '<td style="color:#8a6a63">'+fmtUsd(p.entry_mcap)+'</td>'+
+      '<td style="color:'+(pnl==null?'#7a6a63':pnl<0?R:G)+'">'+(pnl==null?'\u2013':(pnl>0?'+':'')+Number(pnl).toFixed(3))+'</td></tr>';
+  }).join('')||'<tr><td colspan="5" style="text-align:left;color:#8a6a63;padding:6px 0">'+(all.length?'no positions in this sleeve':'no positions yet')+'</td></tr>';
+}
+
+/* Feed endpoint banner. flow_source fails the READ feed over to public RPC when
+   Helius 429s the handshake; sends still go out over the private RPC. A feed
+   running somewhere other than where you assume is the exact bug that produced
+   27 blind closes, so it gets a loud persistent line rather than a log entry. */
+function paintRpcBanner(f,rp){
+  var el=$('rpcBanner'); if(!el) return;
+  /* HTTP reads and the websocket feed fail over independently — holdings can
+     be dead while the feed is fine, which is exactly what happened on 08-04. */
+  /* on_fallback means TRADE traffic fell off the scarce key — buy box, account
+     lookups, sizing reads, confirm polls. Background traffic living on public
+     is the POLICY now, not a fault, so it deliberately does not light this. */
+  if(rp&&rp.on_fallback){
+    el.style.display='';
+    el.innerHTML='<b style="color:'+A+'">TRADE READS OFF '+esc(rp.trade_endpoint||'PRIVATE RPC')+'</b> '+
+      '<span style="color:#8a6a63">now on '+esc(rp.endpoint||'')+
+      ' — the trade key rate-limited the buy box / holdings lookups. '+
+      'Sends still try it first. Retries every 15 min.</span>'+
+      (f&&f.on_fallback?'<br><span style="color:#8a6a63">feed also on public ('+esc(f.endpoint||'')+')</span>':'');
+    return;
+  }
+  /* A cooling BACKGROUND peer is the early warning that the free pool is thin —
+     visible only once a pool is actually configured, so it stays quiet on the
+     default single-public setup. */
+  if(rp&&rp.pool&&rp.pool.length>1&&rp.cooling&&rp.cooling.length){
+    el.style.display='';
+    el.innerHTML='<b style="color:'+A+'">BACKGROUND RPC PEER COOLING</b> <span style="color:#8a6a63">'+
+      esc(rp.cooling.join(', '))+' rate-limited — background reads rotating across the other '+
+      (rp.pool.length-rp.cooling.length)+' of '+rp.pool.length+
+      '. Trade traffic is unaffected ('+esc(rp.trade_endpoint||'')+').</span>';
+    return;
+  }
+  if(!f) { el.style.display='none'; return; }
+  if(f.on_fallback){
+    el.style.display='';
+    el.innerHTML='<b style="color:'+A+'">FLOW ON PUBLIC RPC</b> <span style="color:#8a6a63">'+
+      esc(f.endpoint||'')+' — Helius rate-limited the feed. Reads only; sends still use the private RPC. '+
+      'Retries private every 15 min.'+(f.failovers?' ('+f.failovers+' failover'+(f.failovers>1?'s':'')+')':'')+'</span>';
+  } else if(f.connected===false){
+    el.style.display='';
+    el.innerHTML='<b style="color:'+R+'">FLOW DOWN</b> <span style="color:#8a6a63">'+esc((f.last_error||'').slice(0,90))+'</span>';
+  } else { el.style.display='none'; }
+}
+
+/* ---------- right-column tabs ----------
+   Panes are the cards carrying data-pane; the bar toggles display. Kept as
+   show/hide rather than unmounting so the existing setInterval refreshers keep
+   their DOM targets alive — a hidden pane still updates and is correct the
+   instant you switch to it. */
+var RTAB='sniper';
+function setTab(p){
+  RTAB=p;
+  try{ localStorage.setItem('t8_rtab',p); }catch(e){}
+  Array.prototype.forEach.call(document.querySelectorAll('#tabBar .rtab'),function(b){
+    var on=b.getAttribute('data-pane')===p;
+    b.style.background=on?'#2a0f11':'#0d090a'; b.style.color=on?'#ff8a5c':'#7a6a63';
+  });
+  Array.prototype.forEach.call(document.querySelectorAll('[data-pane]'),function(el){
+    if(el.classList&&el.classList.contains('rtab')) return;
+    if(el.id==='tabBar') return;
+    el.style.display=(el.getAttribute('data-pane')===p)?'':'none';
+  });
+  if(p==='wallets') refreshWalletsDb();
+  if(p==='kol') refreshKol();
+}
+function wireTabs(){
+  Array.prototype.forEach.call(document.querySelectorAll('#tabBar .rtab'),function(b){
+    b.onclick=function(){ setTab(b.getAttribute('data-pane')); };
+  });
+  var saved=null; try{ saved=localStorage.getItem('t8_rtab'); }catch(e){}
+  setTab(saved||'sniper');
+}
+
+/* ---------- wallets DB (unified cross-chain registry — wallets_db.py) ------ */
+var KINDC={kol:'#5ac8ff','whale':'#a678ff','copy-target':'#3ee89a',watch:'#ffb020',other:'#7a6a63'};
+async function refreshWalletsDb(){
+  try{ var j=await jget('/api/wallets/db');
+    if(!j.ok){ $('wdbBody').innerHTML='<span style="color:'+R+'">registry unavailable — '+esc(j.error||'')+'</span>'; return; }
+    var w=j.wallets||[], s=j.summary||{};
+    var chains=Object.keys(s.by_chain||{}).sort(function(a,b){return s.by_chain[b]-s.by_chain[a];});
+    $('wdbCount').innerHTML='<b style="color:#e9ddd8">'+(s.total||0)+'</b> wallets · '+(s.curated||0)+' curated';
+    var chipRow=chains.map(function(c){
+      return '<span style="border:1px solid #3a1014;padding:1px 5px;margin-right:3px;color:#8a6a63">'+esc(c)+' <b style="color:#e9ddd8">'+s.by_chain[c]+'</b></span>';
+    }).join('');
+    var rows=w.map(function(x){
+      var kc=KINDC[x.kind]||'#7a6a63';
+      var ro=x.readonly;
+      return '<tr style="border-top:1px solid #1a0e10">'+
+        '<td style="text-align:left;padding:3px 0"><span style="color:'+kc+'">'+esc(x.kind||'')+'</span></td>'+
+        '<td style="text-align:left;padding:3px 4px;color:#8a6a63">'+esc(x.chain||'')+'</td>'+
+        '<td style="text-align:left;padding:3px 4px;color:#e9ddd8">'+esc((x.label||'').slice(0,14))+
+          (x.unverified?' <span style="color:'+A+';font-size:9px">?</span>':'')+'</td>'+
+        '<td style="text-align:left;padding:3px 4px;color:#7a6a63" title="'+esc(x.address||'')+'">'+esc(shortAddr(x.address))+'</td>'+
+        '<td style="color:#7a6a63;font-size:9px">'+esc((x.sources||[]).join(','))+'</td>'+
+        '<td style="text-align:right">'+(ro?'<span style="color:#3a2a26;font-size:9px" title="owned by its own subsystem — remove it there">lock</span>'
+             :'<span class="wdbDel" data-a="'+esc(x.address)+'" style="color:'+R+';cursor:pointer;font-size:9px">del</span>')+'</td></tr>';
+    }).join('');
+    $('wdbBody').innerHTML='<div style="font-size:9px;margin-bottom:5px">'+chipRow+'</div>'+
+      '<table style="width:100%;border-collapse:collapse;font-size:10px;font-family:\'JetBrains Mono\',monospace">'+
+      '<thead><tr style="color:#7a6a63;font-size:9px"><td style="text-align:left">KIND</td><td style="text-align:left;padding-left:4px">CHAIN</td>'+
+      '<td style="text-align:left;padding-left:4px">LABEL</td><td style="text-align:left;padding-left:4px">ADDRESS</td>'+
+      '<td style="text-align:left">SRC</td><td></td></tr></thead>'+rows+'</table>'+
+      '<div style="margin-top:6px;color:#7a6a63;font-size:9px">rows marked <b>lock</b> are owned by their own subsystem (sniper_config / evm_copy_config / evm_wallets / kolscan) — this panel reads them, it does not write them. balances are on the EVM tab, not here.</div>';
+    Array.prototype.forEach.call(document.querySelectorAll('.wdbDel'),function(el){
+      el.onclick=async function(){
+        try{ await fetch('/api/wallets/db/remove',{method:'POST',headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({address:el.getAttribute('data-a')})}); refreshWalletsDb(); }catch(e){}
+      };
+    });
+  }catch(e){}
+}
+function wireWalletsDb(){
+  var b=$('wdbAdd'); if(!b) return;
+  b.onclick=async function(){
+    var a=($('wdbAddr').value||'').trim(); if(!a) return;
+    $('wdbMsg').textContent='adding…'; $('wdbMsg').style.color='#7a6a63';
+    try{
+      var r=await fetch('/api/wallets/db/add',{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({address:a,label:($('wdbLabel').value||'').trim(),kind:$('wdbKind').value})});
+      var j=await r.json();
+      if(j.ok){ $('wdbMsg').textContent='added '+shortAddr(a); $('wdbMsg').style.color=G;
+        $('wdbAddr').value=''; $('wdbLabel').value=''; refreshWalletsDb(); }
+      else { $('wdbMsg').textContent=j.error||'failed'; $('wdbMsg').style.color=R; }
+    }catch(e){ $('wdbMsg').textContent='request failed'; $('wdbMsg').style.color=R; }
+  };
+}
+
+/* ---------- KOL leaderboard (kolscan.io via kol_source.py) ----------
+   SCRAPED AND UNVERIFIED. Every PnL below is kolscan's claim; nothing here is
+   our on-chain math. Two columns carry the actual judgement:
+     W/L   - sample size. A wallet at 1W/0L on 259 SOL caught one launch. The
+             board ranks by PnL alone, so those float to the top; they render
+             dimmed via `thin`.
+     DAYS  - how many distinct days we have seen this wallet on the board, from
+             our own poll journal. kolscan's timeframe switch is client-side so
+             the scrape is always the DAILY board; this column is the only
+             durability signal available and it needs days of polling to mean
+             anything. Until then it reads 1/1 for everyone, which is correct
+             and not a bug. */
+/* Sorting is client-side over the last fetched board — the fetch and the
+   render are split so clicking a header never re-hits the API (and never
+   costs a kolscan request). Header click toggles direction; first click on a
+   column picks the direction that column is actually asked in: "who made the
+   most" for PnL/WR/days/trades (descending), "who is highest ranked" for
+   #/MED (ascending). Nulls always sink to the bottom in BOTH directions —
+   a wallet with no data is not the best or the worst, it is unknown. */
+var KOLB=[], KOLTGT={}, KOLSORT={key:'score',dir:-1};
+var KOLCOLS=[
+  {k:'rank',       h:'#',    left:true,  asc:true },
+  {k:'name',       h:'NAME', left:true,  asc:true,  str:true},
+  /* SCORE is the default sort, not kolscan's rank. Theirs orders on PnL alone,
+     which put a 1W/0L wallet at #2; this is wilson_low(WR) x log(PnL) x
+     persistence, so Cented (107/94 over 10 months) outranks the flukes. */
+  {k:'score',      h:'SCORE', asc:false, t:'confidence-adjusted WR x log(PnL) x persistence — sort on this, not PnL'},
+  /* W/L displays wins/losses but sorts on TOTAL closed trades — sample size
+     is the question that column really answers (17 of 50 are under 10). */
+  {k:'trades',     h:'W/L',  asc:false, t:'sorts by total closed trades (sample size)'},
+  {k:'win_ratio',  h:'WR',   asc:false},
+  {k:'pnl_sol',    h:'PNL◎', asc:false},
+  {k:'days_seen',  h:'DAYS', asc:true,  t:'distinct days seen on the board (our journal)'},
+  {k:'median_rank',h:'MED',  asc:true,  t:'median rank across our polls'}
+];
+function kolSort(k){
+  var c=null; for(var i=0;i<KOLCOLS.length;i++) if(KOLCOLS[i].k===k) c=KOLCOLS[i];
+  if(KOLSORT.key===k) KOLSORT.dir=-KOLSORT.dir;
+  else { KOLSORT.key=k; KOLSORT.dir=(c&&c.asc)?1:-1; }
+  try{ localStorage.setItem('t8_kolsort',JSON.stringify(KOLSORT)); }catch(e){}
+  renderKol();
+}
+function renderKol(){
+  var b=KOLB.slice(), t=KOLTGT||{};
+  if(!b.length){ $('kolBody').innerHTML='board empty'; return; }
+  var key=KOLSORT.key, dir=KOLSORT.dir;
+  var col=null; for(var i=0;i<KOLCOLS.length;i++) if(KOLCOLS[i].k===key) col=KOLCOLS[i];
+  b.sort(function(x,y){
+    var a=x[key], c=y[key];
+    var an=(a==null||a===''), cn=(c==null||c==='');
+    if(an&&cn) return 0;
+    if(an) return 1;          /* nulls last regardless of dir */
+    if(cn) return -1;
+    if(col&&col.str) return String(a).toLowerCase()<String(c).toLowerCase()?-dir:(String(a).toLowerCase()>String(c).toLowerCase()?dir:0);
+    return (Number(a)-Number(c))*dir;
+  });
+  var head=KOLCOLS.map(function(c){
+    var on=c.k===key;
+    return '<td class="kolH" data-k="'+c.k+'" title="'+esc(c.t||('click to sort by '+c.h))+'" '+
+      'style="cursor:pointer;user-select:none;'+(c.left?'text-align:left;':'')+(c.k==='name'?'padding-left:4px;':'')+
+      'color:'+(on?'#ff8a5c':'#7a6a63')+'">'+c.h+(on?(dir>0?' ▲':' ▼'):'')+'</td>';
+  }).join('');
+  var rows=b.map(function(k){
+    var pc=(k.pnl_sol==null)?'#7a6a63':(k.pnl_sol<0?R:G);
+    var dim=k.thin?';opacity:.45':'';
+    return '<tr style="border-top:1px solid #1a0e10'+dim+'"'+(k.is_target?' data-t="1"':'')+'>'+
+      '<td style="text-align:left;color:#7a6a63;padding:3px 0">'+k.rank+'</td>'+
+      '<td style="text-align:left;padding:3px 4px">'+
+        '<a href="'+esc(k.profile_url)+'" target="_blank" rel="noopener noreferrer" style="color:'+(k.is_target?G:'#e9ddd8')+';text-decoration:none">'+esc((k.name||'').slice(0,16))+'</a>'+
+        (k.thin?' <span style="color:'+A+';font-size:9px" title="fewer than 10 closed trades — PnL is a coin flip at this sample">THIN</span>':'')+
+      '</td>'+
+      '<td style="color:'+(k.score>=60?G:(k.score>=30?'#e9ddd8':'#7a6a63'))+'">'+(k.score==null?'–':Number(k.score).toFixed(0))+'</td>'+
+      '<td style="color:#7a6a63">'+(k.wins==null?'–':k.wins+'/'+k.losses)+'</td>'+
+      '<td style="color:#8a6a63">'+(k.win_ratio==null?'–':k.win_ratio.toFixed(0)+'%')+'</td>'+
+      '<td style="color:'+pc+'">'+(k.pnl_sol==null?'–':(k.pnl_sol>0?'+':'')+k.pnl_sol.toFixed(0))+'</td>'+
+      '<td style="color:#8a6a63">'+(k.days_seen||1)+'</td>'+
+      '<td style="color:#7a6a63">'+(k.median_rank==null?'–':Number(k.median_rank).toFixed(0))+'</td></tr>';
+  }).join('');
+  $('kolBody').innerHTML=
+    '<table style="width:100%;border-collapse:collapse;font-size:10px;text-align:right;font-family:\'JetBrains Mono\',monospace">'+
+    '<thead><tr style="color:#7a6a63;font-size:9px">'+head+'</tr></thead>'+rows+'</table>'+
+    '<div style="margin-top:6px;color:#7a6a63;font-size:9px">click a header to sort · kolscan’s numbers, unverified — a candidate list, not evidence. Promote a wallet only after shadowing it on our own fills.</div>';
+  Array.prototype.forEach.call($('kolBody').querySelectorAll('.kolH'),function(el){
+    el.onclick=function(){ kolSort(el.getAttribute('data-k')); };
+  });
+}
+async function refreshKol(){
+  try{ var j=await jget('/api/kol');
+    var st=j.status||{};
+    if(!j.ok){
+      $('kolState').textContent='ERROR'; $('kolState').style.color=R;
+      $('kolBody').innerHTML='<span style="color:'+R+'">leaderboard unavailable — '+esc(j.error||'unknown')+'</span>'+
+        '<div style="margin-top:4px;color:#7a6a63">if this says 0 rows matched, kolscan redeployed and the CSS-module selector in kol_source.py needs re-deriving.</div>';
+      return;
+    }
+    KOLB=j.board||[]; KOLTGT=j.target||{};
+    try{ var sv=localStorage.getItem('t8_kolsort'); if(sv) KOLSORT=JSON.parse(sv); }catch(e){}
+    $('kolState').innerHTML=(st.stale?'<span style="color:'+A+'">STALE</span> · ':'')+
+      '<b style="color:#e9ddd8">'+KOLB.length+'</b> KOL · '+(j.days_total||0)+'d hist'+
+      (st.fails?' · <span style="color:'+A+'">'+st.fails+' fail</span>':'');
+    $('kolState').style.color='#7a6a63';
+    $('kolTarget').innerHTML = KOLTGT.wallet
+      ? ('sniper target '+shortAddr(KOLTGT.wallet)+' — '+(KOLTGT.on_board
+          ? '<b style="color:'+G+'">on board @ #'+KOLTGT.rank+'</b>'
+          : '<b style="color:'+A+'">NOT on this board</b>'))
+      : '';
+    renderKol();
+  }catch(e){}
+}
+
+/* ---------- smart exit (engine state + smart-vs-fixed scoreboard) ---------- */
+async function refreshSmartExit(){
+  try{ var j=await jget('/api/smart_exit'); if(!j.ok) return;
+    var e=j.engine||{}, b=j.board||{};
+    $('smxState').textContent=j.enforced?'ENFORCED':'SHADOW';
+    $('smxState').style.color=j.enforced?G:'#7a6a63';
+    $('smxLive').innerHTML='track <b style="color:#e9ddd8">'+(e.tracked!=null?e.tracked:'\u2013')+'</b> \u00b7 ghost <b style="color:#e9ddd8">'+(e.ghosts!=null?e.ghosts:'\u2013')+'</b> \u00b7 flow <b style="color:#e9ddd8">'+(e.flow_mints!=null?e.flow_mints:'\u2013')+'</b>';
+    if(j.error){ $('smxBoard').innerHTML='<span style="color:'+A+'">scoreboard unavailable \u2014 '+esc(j.error)+'</span>'; return; }
+    if(!b.n){ $('smxBoard').innerHTML='no dual-scored closes yet \u2014 a row lands once both policies resolve on a trade'; return; }
+    var dC=b.delta>0?G:R, sC=b.smart_pnl>0?G:R, fC=b.fixed_pnl>0?G:R;
+    var trig=(b.triggers||[]).map(function(t){
+      return esc(t.kind)+' <span style="color:#7a6a63">'+t.n+'</span> <span style="color:'+(t.delta>0?G:R)+'">'+(t.delta>0?'+':'')+t.delta.toFixed(3)+'</span>';
+    }).join(' \u00b7 ');
+    $('smxBoard').innerHTML=
+      '<table style="width:100%;border-collapse:collapse;font-size:10px;text-align:right">'+
+      '<tr style="color:#7a6a63"><td style="text-align:left">n='+b.n+' scored</td><td>PNL\u25ce</td><td>WR</td></tr>'+
+      '<tr><td style="text-align:left;color:#ff8a5c">smart</td><td style="color:'+sC+'">'+(b.smart_pnl>0?'+':'')+b.smart_pnl.toFixed(3)+'</td><td style="color:#8a6a63">'+b.smart_wr.toFixed(1)+'%</td></tr>'+
+      '<tr><td style="text-align:left;color:#8a6a63">fixed</td><td style="color:'+fC+'">'+(b.fixed_pnl>0?'+':'')+b.fixed_pnl.toFixed(3)+'</td><td style="color:#8a6a63">'+b.fixed_wr.toFixed(1)+'%</td></tr>'+
+      '</table>'+
+      '<div style="margin-top:4px">delta <b style="color:'+dC+'">'+(b.delta>0?'+':'')+b.delta.toFixed(3)+' \u25ce</b> \u00b7 smart better <b style="color:#e9ddd8">'+b.better+'/'+b.decided+'</b> <span style="color:#7a6a63">(wilson '+b.wilson_low.toFixed(1)+'%)</span></div>'+
+      (trig?'<div style="margin-top:3px;color:#7a6a63">'+trig+'</div>':'');
+  }catch(e){}
+}
+/* ---------- pyramid ghost (simulated scale-in ladder — pyramid.py) ----------
+   Reads the block sniper_status() adds to /api/sniper. Every leg here is a
+   SIMULATION: no buy is sent and no position is created, so the ladder is
+   invisible in the positions table by design. This panel is the only place
+   the in-flight ghost can be seen while it is still running. */
+function renderPyramid(p){
+  if(!p){ $('pyrState').textContent='OFF'; $('pyrState').style.color='#7a6a63';
+          $('pyrBook').textContent='engine not loaded'; return; }
+  var armed=!!p.live;
+  $('pyrState').textContent=!p.enabled?'DISABLED':(armed?'LIVE':'GHOST');
+  $('pyrState').style.color=!p.enabled?'#7a6a63':(armed?'#ff2b2b':'#7a6a63');
+  $('pyrLive').innerHTML='track <b style="color:#e9ddd8">'+(p.tracked!=null?p.tracked:'–')+'</b>'+
+    ' · adds <b style="color:#e9ddd8">'+(p.adds||0)+'</b>'+
+    ' · cut <b style="color:#e9ddd8">'+(p.cut||0)+'</b>'+
+    ' · ladder <b style="color:#e9ddd8">'+(p.laddered||0)+'</b>';
+  var book=p.open_book||[];
+  if(!book.length){ $('pyrBook').innerHTML=
+      '<span style="color:#7a6a63">no ghost in flight — '+
+      (armed?'':'simulated only, nothing is bought')+'</span>'; return; }
+  $('pyrBook').innerHTML=
+    '<table style="width:100%;border-collapse:collapse;font-size:10px;text-align:right">'+
+    '<tr style="color:#7a6a63"><td style="text-align:left">ghost</td><td>legs</td><td>cost◎</td>'+
+    '<td>ret</td><td>age</td><td>+add</td></tr>'+
+    book.map(function(r){
+      var rc=r.ret_pct==null?'#7a6a63':(r.ret_pct<0?R:G);
+      return '<tr style="border-top:1px solid #1a0e0f">'+
+        '<td style="text-align:left;color:#e9ddd8">'+esc(r.symbol||shortAddr(r.mint))+
+        (r.armed?'':' <span style="color:'+A+'" title="flow never armed">⚠</span>')+
+        (r.real_closed?' <span style="color:#5a4a45" title="real position already closed">✓</span>':'')+'</td>'+
+        '<td style="color:'+(r.legs>1?G:'#8a6a63')+'">'+r.legs+'</td>'+
+        '<td style="color:#8a6a63">'+Number(r.cost_sol).toFixed(3)+'</td>'+
+        '<td style="color:'+rc+'">'+(r.ret_pct==null?'–':(r.ret_pct>0?'+':'')+r.ret_pct+'%')+'</td>'+
+        '<td style="color:#7a6a63">'+Math.round(r.age_s)+'s</td>'+
+        '<td style="color:#7a6a63">'+(r.next_add_in_s==null?'–':Math.max(0,Math.round(r.next_add_in_s))+'s')+'</td>'+
+        '</tr>';
+    }).join('')+'</table>';
+}
+function fmtHM(ts){ if(!ts) return '–'; var d=new Date(ts*1000); return ('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2); }
+function setIfIdle(id,val){ var el=$(id); if(el&&document.activeElement!==el&&val!=null) el.value=val; }
+function applyMode(live, running){
+  $('liveDot').style.background=live?'#ff2b2b':'#ffb020';
+  $('modeLabel').textContent=(live?'LIVE':'PAPER')+' \u00b7 '+(running?'ARMED':'IDLE'); $('modeLabel').style.color=live?'#ff2b2b':'#ffb020';
+  $('modeBadge').style.borderColor=live?'#ff2b2b':'#5a1518';
+  $('snDot').style.background=live?'#ff2b2b':'#ffb020';
+  $('snMode').textContent=(live?'LIVE':'PAPER')+' \u2014 '+(running?'RUNNING':'STOPPED'); $('snMode').style.color=live?'#ff2b2b':'#ffb020';
+}
+function wireSniper(){
+  $('snStart').onclick=async function(){ try{ await jpost('/api/sniper/start'); logLine('SNIPER STARTED','#3ee89a'); refreshSniper(); }catch(e){} };
+  $('snStop').onclick=async function(){ try{ await jpost('/api/sniper/stop'); logLine('SNIPER STOPPED','#ff5a5f'); refreshSniper(); }catch(e){} };
+  $('snSave').onclick=async function(){ try{ var b={ target:$('snTarget').value.trim(), sol_per_snipe:parseFloat($('snSol').value), tp_pct:parseFloat($('snTp').value), sl_pct:parseFloat($('snSl').value), timeout_min:parseFloat($('snTimeout').value), max_sol_per_day:parseFloat($('snCap').value) }; var j=await jpost('/api/sniper/config',b); logLine(j.ok?'SNIPER CONFIG SAVED':'save failed: '+esc(j.error),j.ok?'#3ee89a':'#ff5a5f'); refreshSniper(); }catch(e){} };
+  [['snFAll','all'],['snFSnipe','sniper'],['snFOther','other']].forEach(function(p){
+    var el=$(p[0]); if(el) el.onclick=function(){ SN_FILT=p[1]; renderSnPos(); };
+  });
+  $('snArmLbl').onclick=async function(){ var next=!T.live;
+    if(next && !confirm('ARM LIVE — the sniper will spend REAL SOL. Continue?')) return;
+    try{ var j=await jpost('/api/sniper/mode',{live:next,confirm:true}); if(j.ok){ logLine(next?'\u26a0 SNIPER ARMED LIVE':'SNIPER \u2192 PAPER',next?'#ff2b2b':'#ffb020'); } else { logLine('mode change failed: '+esc(j.error),'#ff5a5f'); } refreshSniper(); }catch(e){} };
+}
+
+/* ---------- holdings ---------- */
+/* A real window, not an in-page overlay: the point is that this tab is then
+   free to navigate to gmgn while the box stays alive.
+
+   Chrome IGNORES location=no and forces an address bar onto every window.open
+   popup, so the minimal frame is only reachable through Document PiP — which
+   also floats above other windows, i.e. the box sits ON the gmgn chart instead
+   of behind it. PiP cannot load a URL; the document has to be built by hand, so
+   /popout is fetched and injected. One source of truth either way.
+
+   Named target 't8sell' so repeat clicks refocus the one window instead of
+   stacking them.
+
+   PiP was the DEFAULT and is now opt-in (shift-click). It is the only in-browser
+   way to lose the address bar, but it is an odd surface: Chrome ties its
+   visibility to the opener tab, it is always-on-top, and it froze in practice.
+   For a plain chrome-less window that behaves like any other window — movable,
+   resizable, no address bar — use sellbox.bat, which opens Chrome in app mode.
+   The tradeoff to know: app-mode does NOT float on top; PiP does. */
+var PIPW=null;
+async function popoutSell(ev){
+  if(PIPW&&!PIPW.closed){ try{ PIPW.focus(); return; }catch(e){} }
+  if(ev&&ev.shiftKey&&window.documentPictureInPicture){
+    try{
+      // requestWindow FIRST — it needs the click's user gesture, and awaiting
+      // the fetch before it would spend that gesture and get refused.
+      var w=await documentPictureInPicture.requestWindow({width:390,height:620});
+      var html=await (await fetch('/popout')).text();
+      pipInject(w,html);
+      PIPW=w;
+      w.addEventListener('pagehide',function(){ PIPW=null; });
+      logLine('TRADE BOX floating (PiP) — on top, no address bar. Drag it by the strip at its top edge.','#ffb020');
+      return;
+    }catch(e){ /* dismissed or unsupported -> plain popup below */ }
+  }
+  var p=window.open('/popout','t8sell','width=390,height=620,menubar=no,toolbar=no,status=no');
+  if(!p){ logLine('POP OUT BLOCKED — allow popups for 127.0.0.1 and retry','#ff5a5f'); return; }
+  try{ p.focus(); }catch(e){}
+  // Say WHY the bar is there. Every browser forces one onto window.open popups,
+  // and shift-click silently did nothing on browsers without PiP — which is the
+  // case here: this dashboard usually runs in DuckDuckGo, a WebView2 shell with
+  // no --app switch, so the only bar-free window is a different browser.
+  logLine('TRADE BOX popped out — the address bar is your browser\'s, forced on all popups.'+
+          (window.documentPictureInPicture
+            ? ' Shift-click POP OUT to float it with no bar.'
+            : ' This browser has no picture-in-picture, so shift-click cannot help here —')+
+          ' run <b>sellbox.bat</b> for a bar-free window pinned on top (opens in Chrome).','#ffb020');
+}
+/* innerHTML never executes <script>, so they are stripped first and re-created
+   as live nodes in the PiP document — which runs them with that window as their
+   global. __T8_BASE__ is set before they run: the PiP document has no URL of
+   its own, so the page's relative fetches would otherwise hit about:blank. */
+function pipInject(w,html){
+  var doc=w.document;
+  var parsed=new DOMParser().parseFromString(html,'text/html');
+  var scripts=Array.prototype.slice.call(parsed.querySelectorAll('script'));
+  scripts.forEach(function(s){ s.parentNode.removeChild(s); });
+  doc.head.innerHTML=parsed.head.innerHTML;
+  doc.body.innerHTML=parsed.body.innerHTML;
+  w.__T8_BASE__=location.origin;
+  scripts.forEach(function(old){
+    var s=doc.createElement('script');
+    if(old.src) s.src=old.src; else s.textContent=old.textContent;
+    doc.body.appendChild(s);
+  });
+}
+async function refreshHoldings(){
+  try{ var j=await jget('/api/holdings'); if(!j.ok){ return; }
+    // picked up here rather than fetched separately: the liquidity panel wants
+    // to size EXIT IMPACT in \u25ce rather than dollars, and this response already
+    // carries the SOL price. Falls back to USD sizes when it hasn't loaded yet.
+    if(j.sol_price) SOLUSD=Number(j.sol_price);
+    $('holdTotal').textContent='$'+j.total_usd.toFixed(2)+' + '+j.sol_balance.toFixed(3)+' \u25ce';
+    var box=$('holdBody');
+    if(!j.holdings.length){ box.innerHTML='<div style="color:#8a6a63;font-size:11px">no token holdings over threshold</div>'; return; }
+    box.innerHTML='';
+    j.holdings.forEach(function(h){ var d=document.createElement('div');
+      d.style.cssText='display:flex;align-items:center;gap:8px';
+      d.innerHTML='<b style="color:#e9ddd8;font-size:12px;cursor:pointer">'+esc(h.symbol)+'</b>'+
+        '<span style="color:#7a6a63;font-size:11px">'+Number(h.amount).toLocaleString()+'</span>'+
+        '<b style="color:'+(h.priced===false?'#ffb020':'#3ee89a')+';font-size:12px">'+
+          (h.priced===false?'no px':'$'+Number(h.usd).toFixed(2))+'</b><span style="flex:1"></span>';
+      d.querySelector('b').onclick=function(){ $('ca').value=h.mint; loadToken(h.mint); };
+      [25,50,100].forEach(function(p){ var b=document.createElement('button'); b.textContent=p;
+        b.className='fireBtn'; b.style.cssText='padding:3px 8px;font-size:10px;background:#2a0d10;color:#ff5a5f;border:1px solid #5a1518;cursor:pointer';
+        // Inventory holdings are always Solana, but assigning T.mint directly
+        // bypasses loadToken() — the only place T.evm is ever set. Without the
+        // reset below, T.evm kept whatever the last VIEWED token set it to, so
+        // after looking at any 0x token every sell here fell into fireEvm() and
+        // bailed with "the unlocked EVM wallet holds none of this token".
+        // Not restoring T.mint afterwards is deliberate: fire() ends with
+        // loadToken(T.mint), so the chart is now this holding — putting the old
+        // mint back would leave T.mint pointing somewhere the UI isn't showing.
+        b.onclick=function(){ T.mint=h.mint; T.evm=false; fire('sell',{pct:p},'SELL '+p+'% '+h.symbol); };
+        d.appendChild(b); });
+      box.appendChild(d); });
+  }catch(e){}
+}
+
+/* ---------- discover ---------- */
+async function refreshDiscover(){
+  try{ var j=await jget('/api/discover'); if(!j.ok) return;
+    var el=$('discover'); var coins=j.coins||[];
+    if(!coins.length){ el.innerHTML='<div style="color:#8a6a63;font-size:11px">nothing bonding right now</div>'; return; }
+    el.innerHTML=coins.slice(0,12).map(function(t){ var pct=Math.round(t.bonded_pct!=null?t.bonded_pct:(t.progress!=null?t.progress:0));
+      return '<div data-mint="'+esc(t.mint)+'" class="discRow" style="cursor:pointer;border:1px solid #2a0f11;background:#070506;padding:8px 10px">'+
+        '<div style="display:flex;align-items:center;gap:7px"><b style="color:#e9ddd8;font-size:12px">'+esc(t.symbol||'?')+'</b>'+(t.koth?'<span style="color:#ffb020;font-size:10px">\u265b KOTH</span>':'')+'<span style="color:#7a6a63;font-size:11px">'+esc(t.name||'')+'</span><span style="flex:1"></span><span style="color:#ffb020;font-family:\'JetBrains Mono\',monospace;font-size:12px">'+pct+'%</span></div>'+
+        '<div style="height:4px;background:#1a0e0f;margin-top:5px;position:relative"><div style="position:absolute;inset:0 '+(100-pct)+'% 0 0;background:linear-gradient(90deg,#5a1518,#ff2b2b)"></div></div>'+
+        '<div style="color:#7a6a63;font-size:10px;font-family:\'Share Tech Mono\',monospace;margin-top:4px">MC '+fmtUsd(t.mcap)+' \u00b7 BONDING '+pct+'% \u2192 MIGRATE @ 100%</div></div>';
+    }).join('');
+    Array.prototype.forEach.call(el.querySelectorAll('.discRow'),function(row){ row.onclick=function(){ var m=row.getAttribute('data-mint'); if(m){ $('ca').value=m; loadToken(m); } }; });
+  }catch(e){}
+}
+
+/* ---------- wallet ---------- */
+async function refreshWallets(){
+  try{ var j=await jget('/api/wallet/list'); if(!j) return;
+    if(j.active){ $('walletId').textContent='WALLET '+shortAddr(j.active); }
+    else { $('walletId').textContent='VAULT LOCKED'; }
+  }catch(e){}
+}
+
+/* ---------- SOL vault panel (multi-wallet) ---------- */
+function vaultClose(){ var o=$('vaultOv'); if(o) o.remove(); }
+async function vaultOpen(){
+  vaultClose();
+  var ov=document.createElement('div'); ov.id='vaultOv';
+  ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.82);z-index:900;display:flex;align-items:center;justify-content:center';
+  ov.innerHTML='<div id="vaultBox" style="width:520px;max-width:94vw;max-height:88vh;overflow:auto;background:#0b0708;border:1px solid #5a1518;padding:16px 18px">'+
+    '<div style="display:flex;align-items:center;margin-bottom:10px"><span style="font-family:\'Share Tech Mono\',monospace;font-size:13px;letter-spacing:3px;color:#ff8a5c">SOL WALLET VAULT</span><span style="flex:1"></span>'+
+    '<button id="vClose" style="background:none;border:1px solid #5a1518;color:#ff5a5f;font-size:11px;padding:2px 8px;cursor:pointer">✕</button></div>'+
+    '<div id="vBody" style="font-size:12px;color:#e9ddd8">loading…</div></div>';
+  document.body.appendChild(ov);
+  ov.onclick=function(e){ if(e.target===ov) vaultClose(); };
+  $('vClose').onclick=vaultClose;
+  vaultRender();
+}
+async function vaultRender(){
+  var b=$('vBody'); if(!b) return;
+  var j; try{ j=await jget('/api/wallet/list'); }catch(e){ b.innerHTML='<span style="color:#ff5a5f">vault unreachable</span>'; return; }
+  var ws=j.wallets||[];
+  var rows=ws.map(function(w){
+    var act=j.active===w.pubkey;
+    return '<div style="border:1px solid '+(act?'#1f5a3f':'#2a0f11')+';background:#070506;padding:8px 10px;display:flex;align-items:center;gap:8px">'+
+      '<b style="color:'+(act?'#3ee89a':'#ffb020')+';font-family:\'JetBrains Mono\',monospace;font-size:11px" title="'+esc(w.pubkey)+'">'+esc(shortAddr(w.pubkey))+'</b>'+
+      (act?'<span style="color:#3ee89a;font-size:10px">● ACTIVE</span>':'')+
+      '<span style="color:#7a6a63;font-size:11px">'+(w.sol!=null?w.sol.toFixed(4)+' SOL':'—')+'</span><span style="flex:1"></span>'+
+      (act?'':'<button class="vUse" data-pk="'+esc(w.pubkey)+'" style="background:#0c1f16;color:#3ee89a;border:1px solid #1f5a3f;font-size:10px;padding:2px 8px;cursor:pointer">UNLOCK</button>')+
+      '<button class="vCopy" data-pk="'+esc(w.pubkey)+'" style="background:none;border:1px solid #2a0f11;color:#8a6a63;font-size:10px;padding:2px 8px;cursor:pointer">COPY ADDR</button>'+
+      '<button class="vRm" data-pk="'+esc(w.pubkey)+'" style="background:none;border:1px solid #5a1518;color:#ff5a5f;font-size:10px;padding:2px 6px;cursor:pointer">✕</button></div>';
+  }).join('');
+  b.innerHTML=(rows||'<div style="color:#8a6a63">no wallets in vault yet</div>')+
+    '<div id="vMsg" style="margin-top:8px;font-size:11px"></div>'+
+    '<div style="margin-top:12px;border-top:1px solid #2a0f11;padding-top:10px">'+
+    '<div style="font-family:\'Share Tech Mono\',monospace;font-size:11px;letter-spacing:2px;color:#ff8a5c;margin-bottom:6px">IMPORT WALLET (Robinhood / Phantom / any)</div>'+
+    '<div style="color:#ffb020;font-size:10px;margin-bottom:4px">SOLANA keys only. To sell an EVM token (bcat etc.) use the EVM WALLET card below — an 0x key does NOT go here.</div>'+
+    '<textarea id="vPriv" rows="2" placeholder="SOLANA private key — base58 (Phantom) or [..] byte array (NOT a 0x key, NOT the seed phrase)" style="width:100%;box-sizing:border-box;background:#070506;border:1px solid #4a1418;color:#e9ddd8;font-family:\'JetBrains Mono\',monospace;font-size:11px;padding:6px 8px;outline:none;resize:vertical"></textarea>'+
+    '<div style="display:flex;gap:6px;margin-top:6px">'+
+    '<input id="vPw" type="password" placeholder="vault password (8+ chars)" style="flex:1;background:#070506;border:1px solid #4a1418;color:#e9ddd8;font-family:\'JetBrains Mono\',monospace;font-size:11px;padding:6px 8px;outline:none">'+
+    '<input id="vPw2" type="password" placeholder="repeat password" style="flex:1;background:#070506;border:1px solid #4a1418;color:#e9ddd8;font-family:\'JetBrains Mono\',monospace;font-size:11px;padding:6px 8px;outline:none"></div>'+
+    '<div style="display:flex;gap:6px;margin-top:8px">'+
+    '<button id="vImport" style="flex:1;padding:6px;font-size:10px;background:#0c1f16;color:#3ee89a;border:1px solid #1f5a3f;cursor:pointer">IMPORT</button>'+
+    '<button id="vNew" style="flex:1;padding:6px;font-size:10px;background:#241304;color:#ffb020;border:1px solid #5a3a10;cursor:pointer">CREATE NEW</button>'+
+    (j.active?'<button id="vLock" style="flex:1;padding:6px;font-size:10px;background:#2a0d10;color:#ff5a5f;border:1px solid #5a1518;cursor:pointer">LOCK (LOGOUT)</button>':'')+
+    '</div><div style="color:#7a6a63;font-size:10px;margin-top:6px">key is encrypted with your password and stored locally in wallets.enc.json — the plaintext never leaves this machine</div></div>';
+  var msg=function(t,ok){ $('vMsg').innerHTML='<span style="color:'+(ok?'#3ee89a':'#ff5a5f')+'">'+t+'</span>'; };
+  Array.prototype.forEach.call(b.querySelectorAll('.vUse'),function(btn){ btn.onclick=async function(){
+    var pw=prompt('Vault password for '+shortAddr(btn.getAttribute('data-pk'))+':'); if(pw==null) return;
+    var r=await jpost('/api/wallet/unlock',{pubkey:btn.getAttribute('data-pk'),password:pw});
+    if(r.ok){ logLine('WALLET SWITCHED → '+shortAddr(r.pubkey),'#3ee89a'); refreshWallets(); vaultRender(); } else msg(esc(r.error),false); }; });
+  Array.prototype.forEach.call(b.querySelectorAll('.vCopy'),function(btn){ btn.onclick=function(){
+    try{ navigator.clipboard.writeText(btn.getAttribute('data-pk')); msg('address copied',true); }catch(e){ msg('copy failed',false); } }; });
+  Array.prototype.forEach.call(b.querySelectorAll('.vRm'),function(btn){ btn.onclick=async function(){
+    var pk=btn.getAttribute('data-pk');
+    if(!confirm('Remove '+shortAddr(pk)+' from the vault? Make sure you have the key backed up elsewhere.')) return;
+    var r=await jpost('/api/wallet/remove',{pubkey:pk});
+    if(!r.ok&&/password/i.test(r.error||'')){ var pw=prompt(r.error+'\n\nPassword:'); if(pw==null) return;
+      r=await jpost('/api/wallet/remove',{pubkey:pk,password:pw}); }
+    if(r.ok){ msg('removed',true); refreshWallets(); vaultRender(); } else msg(esc(r.error),false); }; });
+  $('vImport').onclick=async function(){
+    var r=await jpost('/api/wallet/import',{private_key:$('vPriv').value,password:$('vPw').value,password2:$('vPw2').value});
+    if(r.ok){ $('vPriv').value=''; logLine('WALLET IMPORTED + ACTIVE → '+shortAddr(r.pubkey)+' ('+(r.sol_balance||0).toFixed(4)+' SOL)','#3ee89a'); refreshWallets(); vaultRender(); }
+    else msg(esc(r.error),false); };
+  $('vNew').onclick=async function(){
+    var r=await jpost('/api/wallet/create',{password:$('vPw').value,password2:$('vPw2').value});
+    if(r.ok){ msg('<b>NEW WALLET — BACK THIS KEY UP NOW:</b><br><span style="user-select:all;word-break:break-all;color:#ff5a5f">'+esc(r.private_key)+'</span>',true); refreshWallets(); }
+    else msg(esc(r.error),false); };
+  var lk=$('vLock'); if(lk) lk.onclick=async function(){ await jpost('/api/wallet/logout'); refreshWallets(); vaultRender(); };
+}
+function wireVault(){ $('btnVault').onclick=vaultOpen; }
+
+/* ---------- EVM watch wallets (view-only) ---------- */
+async function refreshEvmWallets(){
+  try{ var j=await jget('/api/evm/wallets'); if(!j.ok) return;
+    var ws=j.wallets||[]; var tot=0; ws.forEach(function(w){ tot+=w.total_usd||0; });
+    $('evmTotal').textContent=ws.length?('$'+tot.toFixed(2)):'—';
+    var box=$('evmBody');
+    if(!ws.length){ box.innerHTML='<div style="color:#8a6a63;font-size:11px">no EVM wallets watched — paste a 0x address to track its coins (Robinhood Chain, Base, Ethereum, Arbitrum, Optimism, Polygon, Gnosis)</div>'; return; }
+    box.innerHTML=ws.map(function(w){
+      var rows=(w.tokens||[]).map(function(t){
+        return '<div class="evmTok" data-a="'+esc(t.address||'')+'" style="display:flex;align-items:center;gap:8px;padding:3px 0;'+(t.address?'cursor:pointer':'')+'">'+
+          '<span style="color:#8a9ba0;font-size:9px;font-family:\'Share Tech Mono\',monospace;letter-spacing:1px;border:1px solid #2a0f11;padding:1px 4px">'+esc((t.chain||'?').toUpperCase())+'</span>'+
+          '<b style="color:#e9ddd8;font-size:12px">'+esc(t.symbol)+'</b>'+
+          '<span style="color:#7a6a63;font-size:11px">'+Number(t.amount).toLocaleString(undefined,{maximumFractionDigits:4})+'</span>'+
+          '<span style="flex:1"></span>'+
+          '<b style="color:'+(t.usd!=null?'#3ee89a':'#7a6a63')+';font-size:12px">'+(t.usd!=null?'$'+t.usd.toFixed(2):'no price')+'</b></div>';
+      }).join('');
+      return '<div style="border:1px solid #2a0f11;background:#070506;padding:8px 10px">'+
+        '<div style="display:flex;align-items:center;gap:8px">'+
+          '<b style="color:#ffb020;font-family:\'JetBrains Mono\',monospace;font-size:11px">'+esc(shortAddr(w.address))+'</b>'+
+          (w.label?'<span style="color:#7a6a63;font-size:11px">'+esc(w.label)+'</span>':'')+
+          '<span style="flex:1"></span>'+
+          '<b style="color:#3ee89a;font-size:12px">$'+(w.total_usd||0).toFixed(2)+'</b>'+
+          '<button class="evmRm" data-addr="'+esc(w.address)+'" title="stop watching" style="background:none;border:1px solid #5a1518;color:#ff5a5f;font-size:10px;padding:1px 6px;cursor:pointer">✕</button></div>'+
+        (rows?('<div style="margin-top:6px">'+rows+'</div>'):'<div style="color:#8a6a63;font-size:10px;margin-top:5px">nothing found on scanned chains (yet)</div>')+'</div>';
+    }).join('');
+    Array.prototype.forEach.call(box.querySelectorAll('.evmRm'),function(b){ b.onclick=async function(ev){ ev.stopPropagation(); await jpost('/api/evm/wallets/remove',{address:b.getAttribute('data-addr')}); refreshEvmWallets(); }; });
+    Array.prototype.forEach.call(box.querySelectorAll('.evmTok'),function(rw){ rw.onclick=function(){ var a=rw.getAttribute('data-a'); if(a){ $('ca').value=a; loadToken(a); } }; });
+  }catch(e){}
+}
+function wireEvmWallets(){
+  var add=async function(){ var a=$('evmAddr').value.trim();
+    if(!EVM_RE.test(a)){ logLine('not a valid 0x address','#ff5a5f'); return; }
+    try{ var j=await jpost('/api/evm/wallets/add',{address:a});
+      if(j.ok){ $('evmAddr').value=''; logLine('WATCHING EVM WALLET '+shortAddr(a)+' — scanning chains…','#3ee89a'); refreshEvmWallets(); }
+      else logLine('watch failed: '+esc(j.error||''),'#ff5a5f');
+    }catch(e){ logLine('watch failed: '+esc(e),'#ff5a5f'); } };
+  $('evmAdd').onclick=add;
+  $('evmAddr').addEventListener('keydown',function(e){ if(e.key==='Enter') add(); });
+}
+
+/* ---------- EVM trading wallet (encrypted vault) ---------- */
+async function refreshEvmWallet(){
+  try{ var j=await jget('/api/evm/wallet'); if(!j.ok) return;
+    $('ewStatus').textContent=j.unlocked?('UNLOCKED '+shortAddr(j.address)):(j.vault&&j.vault.length?'LOCKED':'NO WALLET');
+    $('ewStatus').style.color=j.unlocked?'#3ee89a':'#7a6a63';
+    var b=$('ewBody');
+    function ewBalHtml(w){ if(!w||!w.tokens) return '';
+      if(!w.tokens.length) return '<div style="color:#8a6a63;font-size:10px">empty on scanned chains</div>';
+      return '<div style="display:flex;flex-direction:column;gap:2px;margin:2px 0">'+w.tokens.map(function(t){
+        return '<div style="display:flex;gap:6px;align-items:center;font-size:11px">'+
+          '<span style="color:#8a9ba0;font-size:9px;font-family:\'Share Tech Mono\',monospace;border:1px solid #2a0f11;padding:0 3px">'+esc((t.chain||'?').toUpperCase())+'</span>'+
+          '<b style="color:#e9ddd8">'+esc(t.symbol)+'</b>'+
+          '<span style="color:#7a6a63">'+Number(t.amount).toLocaleString(undefined,{maximumFractionDigits:5})+'</span>'+
+          '<span style="flex:1"></span><b style="color:'+(t.usd!=null?'#3ee89a':'#7a6a63')+'">'+(t.usd!=null?'$'+t.usd.toFixed(2):'—')+'</b></div>';
+      }).join('')+'</div>';
+    }
+    if(j.unlocked){
+      var uw=(j.vault||[]).filter(function(w){return w.address.toLowerCase()===(j.address||'').toLowerCase();})[0];
+      b.innerHTML='<div style="color:#3ee89a;font-size:11px">● unlocked '+esc(j.address)+'</div>'+
+        (uw&&uw.total_usd!=null?'<div style="color:#ffb020;font-size:11px">balance: $'+uw.total_usd.toFixed(2)+'</div>':'')+
+        ewBalHtml(uw)+
+        '<div id="ewSwapArm" style="margin-top:6px"></div>'+
+        '<div style="display:flex;gap:6px;margin-top:6px"><button id="ewLock" style="padding:5px 12px;font-size:10px;background:#2a0d10;color:#ff5a5f;border:1px solid #5a1518;cursor:pointer">LOCK</button>'+
+        '<button id="ewBackup" style="padding:5px 12px;font-size:10px;background:#1a1405;color:#ffb020;border:1px solid #5a4a18;cursor:pointer">BACK UP KEY</button></div>'+
+        '<div id="ewReveal" style="font-size:10px"></div>';
+      $('ewLock').onclick=async function(){ await jpost('/api/evm/wallet/lock'); refreshEvmWallet(); };
+      $('ewBackup').onclick=function(){ ewRevealKey(j.address); };
+      renderSwapArm();
+      return;
+    }
+    var has=j.vault&&j.vault.length;
+    b.innerHTML=
+      (has?'<div style="color:#7a6a63">saved: '+j.vault.map(function(w){return '<span style="color:#ffb020">'+esc(shortAddr(w.address))+'</span>'+(w.total_usd!=null?' <span style="color:#3ee89a">$'+w.total_usd.toFixed(2)+'</span>':'');}).join(' · ')+'</div>'+ewBalHtml(j.vault[0]):
+        '<div style="color:#ffb020;font-size:10px">no EVM wallet yet — generate a fresh one (safest: born on this machine, shown once, encrypted)</div>')+
+      '<input id="ewPw" type="password" placeholder="vault password (8+ chars)" style="background:#070506;border:1px solid #4a1418;color:#e9ddd8;font-family:\'JetBrains Mono\',monospace;font-size:11px;padding:6px 8px;outline:none">'+
+      '<div style="display:flex;gap:6px;flex-wrap:wrap">'+
+        (has?'<button id="ewUnlock" style="flex:1;padding:6px;font-size:10px;background:#0c1f16;color:#3ee89a;border:1px solid #1f5a3f;cursor:pointer">UNLOCK</button>':'')+
+        (has?'<button id="ewBackup2" style="flex:1;padding:6px;font-size:10px;background:#1a1405;color:#ffb020;border:1px solid #5a4a18;cursor:pointer">BACK UP KEY</button>':'')+
+        '<button id="ewGen" style="flex:1;padding:6px;font-size:10px;background:#2a0d10;color:#ff5a5f;border:1px solid #5a1518;cursor:pointer">GENERATE NEW</button>'+
+      '</div>'+
+      '<div style="border-top:1px solid #2a0f11;margin-top:8px;padding-top:8px">'+
+        '<div style="color:#ffb020;font-size:10px;margin-bottom:4px">IMPORT EXISTING WALLET (Robinhood / MetaMask) — to sell an EVM token you hold, paste that wallet\'s 0x private key + set a vault password, then UNLOCK will use it:</div>'+
+        '<textarea id="ewImport" rows="2" placeholder="0x… private key (NOT the seed phrase). Encrypted locally; never leaves this machine." style="width:100%;box-sizing:border-box;background:#070506;border:1px solid #4a1418;color:#e9ddd8;font-family:\'JetBrains Mono\',monospace;font-size:11px;padding:6px 8px;outline:none;resize:vertical"></textarea>'+
+        '<button id="ewImportBtn" style="width:100%;margin-top:5px;padding:6px;font-size:10px;background:#0c1f16;color:#3ee89a;border:1px solid #1f5a3f;cursor:pointer">IMPORT + UNLOCK</button>'+
+      '</div>'+
+      '<div id="ewReveal" style="font-size:10px"></div>'+
+      '<div id="ewMsg" style="font-size:10px;color:#8a6a63"></div>';
+    if(has){
+      $('ewUnlock').onclick=async function(){ var pw=$('ewPw').value; var addr=j.vault[0].address;
+        var r=await jpost('/api/evm/wallet/unlock',{address:addr,password:pw});
+        $('ewMsg').innerHTML=r.ok?'<span style="color:#3ee89a">unlocked</span>':'<span style="color:#ff5a5f">'+esc(r.error)+'</span>'; if(r.ok) refreshEvmWallet(); };
+      $('ewBackup2').onclick=function(){ ewRevealKey(j.vault[0].address); };
+    }
+    $('ewImportBtn').onclick=async function(){ var pw=$('ewPw').value;
+      if(pw.length<8){ $('ewMsg').innerHTML='<span style="color:#ff5a5f">set a vault password (8+ chars) first</span>'; return; }
+      var pk=$('ewImport').value.trim();
+      if(!/^(0x)?[0-9a-fA-F]{64}$/.test(pk)){ $('ewMsg').innerHTML='<span style="color:#ff5a5f">expected a 0x + 64-hex private key (not the seed phrase)</span>'; return; }
+      var r=await jpost('/api/evm/wallet/import',{private_key:pk,password:pw});
+      if(r.ok){ $('ewImport').value=''; logLine('EVM WALLET IMPORTED + UNLOCKED → '+shortAddr(r.address),'#3ee89a'); refreshEvmWallet(); }
+      else $('ewMsg').innerHTML='<span style="color:#ff5a5f">'+esc(r.error)+'</span>'; };
+    $('ewGen').onclick=async function(){ var pw=$('ewPw').value;
+      if(pw.length<8){ $('ewMsg').innerHTML='<span style="color:#ff5a5f">password must be 8+ chars</span>'; return; }
+      if(!confirm('Generate a NEW EVM wallet? Back up the private key immediately after — it stays encrypted and you can re-reveal it with BACK UP KEY + your password.')) return;
+      var r=await jpost('/api/evm/wallet/create',{password:pw});
+      if(!r.ok){ $('ewMsg').innerHTML='<span style="color:#ff5a5f">'+esc(r.error)+'</span>'; return; }
+      /* show key and DO NOT auto-refresh (refresh would wipe this display) */
+      ewShowKey(r.address, r.private_key, true);
+      $('ewStatus').textContent='UNLOCKED '+shortAddr(r.address); $('ewStatus').style.color='#3ee89a';
+    };
+  }catch(e){}
+}
+function ewShowKey(addr, priv, isNew){
+  var el=$('ewReveal'); if(!el) return;
+  el.innerHTML='<div style="color:#ffb020;border:1px solid #5a4a18;background:#1a1405;padding:8px;margin-top:4px;word-break:break-all">'+
+    '<b>'+(isNew?'NEW WALLET — BACK THIS UP NOW':'PRIVATE KEY — back up, then clear')+':</b><br>'+
+    'address: '+esc(addr)+'<br>private key: <span style="color:#ff5a5f;user-select:all">'+esc(priv)+'</span><br>'+
+    '<button onclick="ewCopyKey(this,\''+esc(priv)+'\')" style="margin-top:6px;padding:3px 10px;font-size:10px;background:#0c1f16;color:#3ee89a;border:1px solid #1f5a3f;cursor:pointer">COPY</button> '+
+    '<button onclick="document.getElementById(\'ewReveal\').innerHTML=\'\'" style="margin-top:6px;padding:3px 10px;font-size:10px;background:#2a0d10;color:#ff5a5f;border:1px solid #5a1518;cursor:pointer">CLEAR</button><br>'+
+    '<span style="color:#8a6a63">store it in a password manager. Never paste it into a website, chat, or email.</span></div>';
+}
+function ewCopyKey(btn, priv){ try{ navigator.clipboard.writeText(priv); btn.textContent='COPIED'; }catch(e){ btn.textContent='copy failed'; } }
+
+/* ---------- EVM swap arming (LIVE gate lives here, not on the fire buttons) ---------- */
+async function renderSwapArm(){
+  var el=$('ewSwapArm'); if(!el) return;
+  var c; try{ c=await jget('/api/evm/swap/config'); }catch(e){ return; }
+  if(!c||!c.ok){ el.innerHTML='<div style="color:#7a6a63;font-size:10px">swap engine unavailable</div>'; return; }
+  var live=!!c.cfg.live, slip=(c.cfg.slippage_bps/100);
+  el.innerHTML='<div style="border:1px solid '+(live?'#5a1518':'#2a0f11')+';background:'+(live?'#1a0708':'#070506')+';padding:6px 8px">'+
+    '<div style="display:flex;align-items:center;gap:8px">'+
+      '<span style="font-family:\'Share Tech Mono\',monospace;font-size:10px;letter-spacing:2px;color:'+(live?'#ff5a5f':'#7a6a63')+'">EVM SWAP: '+(live?'● LIVE — REAL FUNDS':'PAPER (quotes only)')+'</span>'+
+      '<span style="flex:1"></span>'+
+      '<button id="ewArm" style="padding:3px 10px;font-size:10px;background:'+(live?'#2a0d10':'#241304')+';color:'+(live?'#ff5a5f':'#ffb020')+';border:1px solid '+(live?'#5a1518':'#5a3a10')+';cursor:pointer">'+(live?'DISARM':'ARM LIVE')+'</button>'+
+    '</div>'+
+    '<div style="display:flex;align-items:center;gap:6px;margin-top:5px">'+
+      '<span style="color:#7a6a63;font-size:10px">slippage %</span>'+
+      '<input id="ewSlip" value="'+slip+'" style="width:52px;background:#070506;border:1px solid #4a1418;color:#e9ddd8;font-family:\'JetBrains Mono\',monospace;font-size:11px;padding:3px 5px;outline:none">'+
+      '<span style="color:#7a6a63;font-size:10px">chains: '+esc((c.chains||[]).join(', '))+'</span>'+
+    '</div></div>';
+  $('ewSlip').onchange=async function(){ var v=parseFloat($('ewSlip').value); if(v>0&&v<50) await jpost('/api/evm/swap/config',{slippage_bps:Math.round(v*100)}); };
+  $('ewArm').onclick=async function(){
+    if(!live){ if(!confirm('Arm LIVE EVM trading?\n\nBuy/sell buttons will send REAL transactions on-chain that spend real funds. Each trade still asks you to confirm the quoted amounts first.')) return; }
+    await jpost('/api/evm/swap/config',{live:!live}); renderSwapArm();
+    logLine(live?'EVM SWAP DISARMED → PAPER':'EVM SWAP ARMED → LIVE','#ffb020');
+  };
+}
+
+/* Execute an EVM swap: quote (read-only) → confirm dialog → POST /api/evm/swap.
+   The user fires it; nothing here auto-trades. */
+async function fireEvm(kind, pctOrAmt){
+  if(T.busy||!T.mint) return;
+  var side=(kind==='buy')?'buy':'sell', amount;
+  var h; try{ h=await jget('/api/evm/holdings'); }catch(e){ h={}; }
+  if(!h.address){ logLine('EVM WALLET LOCKED — open VAULT → EVM and UNLOCK the wallet that holds this token','#ff5a5f'); return; }
+  if(side==='buy'){ amount=pctOrAmt; }
+  else{
+    var tok=(h.tokens||[]).filter(function(t){ return (t.address||'').toLowerCase()===T.mint.toLowerCase(); })[0];
+    if(!tok||!tok.amount){ logLine('the unlocked EVM wallet ('+shortAddr(h.address)+') holds none of this token','#ff5a5f'); return; }
+    if(!tok.tradeable){ logLine('this token is on a chain with no verified router — view-only','#ff5a5f'); return; }
+    amount=tok.amount*pctOrAmt/100;
+  }
+  logLine((side==='buy'?'BUY':'SELL '+pctOrAmt+'%')+' '+shortAddr(T.mint)+' — quoting…','#ffb020');
+  var q; try{ q=await jget('/api/evm/quote?mint='+encodeURIComponent(T.mint)+'&side='+side+'&amount='+amount); }
+  catch(e){ logLine('quote error: '+esc(e),'#ff5a5f'); return; }
+  if(!q.ok){ logLine('quote failed: '+esc(q.error),'#ff5a5f'); return; }
+  var nOut=Number(q.amount_out);
+  var line=side==='buy'
+    ? ('BUY  spend '+amount+' ETH  →  ~'+nOut.toLocaleString(undefined,{maximumFractionDigits:0})+' '+q.symbol)
+    : ('SELL  '+Number(amount).toLocaleString(undefined,{maximumFractionDigits:4})+' '+q.symbol+'  →  ~'+nOut.toFixed(6)+' ETH'+(q.needs_approval?'  (first sell also sends an approve tx)':''));
+  if(!q.live){
+    logLine('EVM SWAP is PAPER — '+line+' · slippage '+(q.slippage_bps/100)+'% · ARM LIVE in the EVM wallet card to send it','#ffb020');
+    alert('PAPER MODE — nothing was sent.\n\n'+line+'\nslippage '+(q.slippage_bps/100)+'%\n\nTo actually trade: open VAULT → EVM wallet → ARM LIVE, then fire again.');
+    return;
+  }
+  if(!confirm(line+'\nslippage '+(q.slippage_bps/100)+'%  ·  min received after slippage enforced on-chain\n\nSend this REAL transaction on '+q.chain+' chain?')) { logLine('cancelled','#7a6a63'); return; }
+  setBusy(true); logLine(line+' — SENDING…','#ffb020');
+  try{
+    var j=await jpost('/api/evm/swap',{mint:T.mint,side:side,amount:amount,confirm:true});
+    if(j.ok){
+      if(j.approve_tx) logLine('approve sent: '+shortAddr(j.approve_tx),'#7a6a63');
+      logLine(line+' → <b style="color:#3ee89a">SENT</b> <a href="'+esc(j.explorer)+'" target="_blank">explorer</a> — confirming…','#3ee89a');
+      pollEvmTx(q.chain,j.tx,line,j.explorer);
+    } else logLine(line+' FAILED: '+esc(j.error),'#ff5a5f');
+  }catch(e){ logLine(line+' ERROR: '+esc(e),'#ff5a5f'); }
+  setBusy(false);
+}
+async function pollEvmTx(chain,tx,label,url){
+  for(var i=0;i<40;i++){
+    await new Promise(function(r){ setTimeout(r,3000); });
+    try{ var s=await jget('/api/evm/tx/'+chain+'/'+tx);
+      if(s.status==='success'||s.status==='failed'){
+        var ok=s.status==='success';
+        logLine(label+' → <b style="color:'+(ok?'#3ee89a':'#ff5a5f')+'">'+s.status.toUpperCase()+'</b> <a href="'+esc(url)+'" target="_blank">explorer</a>',ok?'#3ee89a':'#ff5a5f');
+        refreshEvmWallet(); return;
+      }
+    }catch(e){}
+  }
+  logLine(label+' — confirm poll timed out, check explorer','#ff5a5f');
+}
+async function ewRevealKey(addr){
+  var pw=prompt('Enter your vault password to reveal the private key for backup:');
+  if(!pw) return;
+  var r=await jpost('/api/evm/wallet/reveal',{address:addr,password:pw});
+  if(r.ok){ ewShowKey(addr, r.private_key, false); }
+  else { $('ewReveal').innerHTML='<span style="color:#ff5a5f">'+esc(r.error||'reveal failed')+'</span>'; }
+}
+
+/* ---------- EVM copy watch (paper only) ---------- */
+async function refreshEvmCopy(){
+  try{ var j=await jget('/api/evm/copy'); if(!j.ok) return;
+    $('ecPnl').textContent=(j.n_closed?('$'+j.paper_pnl_usd.toFixed(2)+' · '+j.wins+'/'+j.n_closed+' W'):'no closes yet')+(j.running?'':' · STOPPED');
+    var tg=(j.config&&j.config.targets)||[];
+    var h='<div style="color:#7a6a63">'+tg.map(function(t){ return '<span style="color:#ffb020">'+esc(t.label||shortAddr(t.address))+'</span> <span style="font-size:9px">['+esc(t.chain)+']</span>'; }).join(' · ')+(j.last_error?' <span style="color:#ff5a5f">ERR '+esc(j.last_error).slice(0,40)+'</span>':'')+'</div>';
+    (j.open||[]).forEach(function(p){
+      h+='<div class="ecTok" data-a="'+esc(p.token)+'" style="display:flex;align-items:center;gap:8px;cursor:pointer;border:1px solid #2a0f11;background:#070506;padding:5px 8px">'+
+        '<span style="color:#8a9ba0;font-size:9px;font-family:\'Share Tech Mono\',monospace;border:1px solid #2a0f11;padding:1px 4px">'+esc((p.kind||'?').toUpperCase())+'</span>'+
+        '<b style="color:#e9ddd8">'+esc(p.symbol)+'</b>'+
+        '<span style="color:#7a6a63">@$'+Number(p.entry_price).toPrecision(3)+'</span>'+
+        '<span style="color:#7a6a63;font-size:10px">'+(p.latency_s!=null?p.latency_s+'s late':'')+'</span>'+
+        '<span style="flex:1"></span><span style="color:#ffb020;font-size:10px">OPEN</span></div>';
+    });
+    (j.recent_closed||[]).slice(0,5).forEach(function(p){
+      var c=(p.pnl_usd||0)>=0?G:R;
+      h+='<div class="ecTok" data-a="'+esc(p.token)+'" style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:2px 8px">'+
+        '<b style="color:#7a6a63">'+esc(p.symbol)+'</b>'+
+        '<span style="color:#7a6a63;font-size:10px">'+esc(p.note||'')+'</span>'+
+        '<span style="flex:1"></span><b style="color:'+c+'">'+(p.pnl_usd!=null?(p.pnl_usd>=0?'+':'')+p.pnl_usd.toFixed(2):'?')+'</b></div>';
+    });
+    (j.events||[]).slice(0,4).forEach(function(e){
+      h+='<div style="color:#8a6a63;font-size:10px;font-family:\'Share Tech Mono\',monospace">'+new Date(e.ts*1000).toLocaleTimeString()+' '+esc(e.msg)+'</div>';
+    });
+    $('ecBody').innerHTML=h;
+    Array.prototype.forEach.call(document.querySelectorAll('.ecTok'),function(rw){ rw.onclick=function(){ var a=rw.getAttribute('data-a'); if(a){ $('ca').value=a; loadToken(a); } }; });
+  }catch(e){}
+}
+
+/* ---------- search ---------- */
+function wireSearch(){
+  var ca=$('ca');
+  ca.addEventListener('input',function(e){ var v=e.target.value.trim(); clearTimeout(T.searchTimer);
+    if(MINT_RE.test(v)||EVM_RE.test(v)){ $('sres').innerHTML=''; loadToken(v); return; }
+    if(v.length<2){ $('sres').innerHTML=''; return; }
+    T.searchTimer=setTimeout(function(){ doSearch(v); },200); });
+  ca.addEventListener('keydown',function(e){ if(e.key==='Enter'&&T.lastResults.length&&$('sres').innerHTML){ pickResult(T.lastResults[0]); } });
+}
+async function doSearch(q){
+  try{ var j=await jget('/api/search?q='+encodeURIComponent(q)); if(!j.ok) return;
+    if($('ca').value.trim()!==q) return; T.lastResults=j.results||[];
+    var box=$('sres');
+    if(!T.lastResults.length){ box.innerHTML='<div style="padding:6px;color:#8a6a63;font-size:11px">no tokens found</div>'; return; }
+    box.innerHTML=T.lastResults.slice(0,8).map(function(t,i){
+      return '<div data-i="'+i+'" class="sresRow" style="display:flex;align-items:center;gap:6px;cursor:pointer;border:1px solid #2a0f11;background:#070506;padding:6px 8px;margin-top:4px;font-size:11px"><b style="color:#e9ddd8">'+esc(t.symbol)+'</b> <span style="color:#7a6a63;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(t.name||'')+'</span> <span style="color:#ffb020">MC '+fmtUsd(t.mcap)+'</span> <span title="age since launch" style="color:#8a9ba0;min-width:26px;text-align:right">'+age(t.createdAt)+'</span></div>'; }).join('');
+    Array.prototype.forEach.call(box.querySelectorAll('.sresRow'),function(r){ r.onclick=function(){ pickResult(T.lastResults[+r.getAttribute('data-i')]); }; });
+  }catch(e){}
+}
+function pickResult(t){ $('sres').innerHTML=''; $('ca').value=t.mint; loadToken(t.mint); }
+
+/* ---------- boot ---------- */
+function runBoot(){
+  var lines=[
+    ['CYBERDYNE SYSTEMS MODEL 101 \u2014 NEURAL NET ONLINE','#3ee89a'],
+    ['JUPITER v6 UPLINK \u00b7 JITO MEV RELAY OK','#8a6a63'],
+    ['SOL MAINNET \u00b7 pooled HTTP session','#8a6a63'],
+    ['MEMPOOL MONITOR ACTIVE \u00b7 pump.fun bonding curves','#8a6a63'],
+    ['ALL SYSTEMS NOMINAL \u2014 AWAITING FIRE COMMAND','#3ee89a']
+  ];
+  var i=0; (function step(){ if(i>=lines.length) return; logLine(lines[i][1]?lines[i][0]:lines[i][0],lines[i][1]); i++; setTimeout(step,220); })();
+}
+
+/* ---------- init ---------- */
+async function init(){
+  startClock(); buildButtons(); buildTFButtons(); buildTech(); wireZoom(); wireSniper(); wireSearch(); wireEvmWallets(); wireVault(); runBoot();
+  // synthetic seed so the HUD looks alive instantly, replaced by live data
+  T.candles=genCandles(64).map(function(c){return c;}); drawChart(); buildSignals();
+  T.book=buildBookFromFlow(T.candles[T.candles.length-1][3],120000,90000); drawDepth(); buildDepthUI();
+  lineChart('eqCanvas',[7.78,6.95,7.14,6.73,7.02,6.61,6.9,7.31,6.98,6.55,6.8,6.73],'#ffb020');
+  lineChart('pnlCanvas',[0,0.044,0.029,0.061,0.055,0.088,0.082,0.101,0.095,0.079,0.067,0.061],'#3ee89a');
+  // which EVM chains have a verified swap router (drives tradeable badges) —
+  // await before the first loadToken so an EVM token renders the right badge
+  try{ var c=await jget('/api/evm/swap/config'); if(c&&c.ok) T.evmChains=(c.chains||[]).map(function(s){return s.toLowerCase();}); }catch(e){}
+  // live pulls
+  refreshWallets(); refreshDashboard(); refreshSniper(); refreshSmartExit(); refreshHoldings(); refreshDiscover(); refreshEvmWallets(); refreshEvmCopy(); refreshEvmWallet();
+  var last=null; try{ last=localStorage.getItem('t8_lastMint'); }catch(e){}
+  if(last){ $('ca').value=last; loadToken(last); }
+  // polling — via poll(), which stops everything while the tab is hidden
+  poll(refreshSniper,6000);
+  poll(refreshSmartExit,20000);   // scoreboard is cached server-side (15s)
+  poll(refreshDashboard,12000);
+  poll(refreshHoldings,15000);
+  poll(refreshDiscover,20000);
+  poll(refreshWallets,15000);
+  poll(refreshEvmWallets,60000);
+  poll(refreshEvmCopy,15000);
+  poll(refreshEvmWallet,20000);
+  refreshKol(); poll(refreshKol,300000);   // board is daily; server polls hourly
+  wireWalletsDb(); refreshWalletsDb(); poll(refreshWalletsDb,60000);
+  wirePollVisibility();
+  wireTabs();   // last: it calls setTab, which needs the refreshers defined
+  window.addEventListener('resize',function(){ drawChart(); drawDepth(); lineChart('eqCanvas',[],'#ffb020'); refreshDashboard(); });
+}
+if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',init); else init();
+</script>
+</body>
+</html>

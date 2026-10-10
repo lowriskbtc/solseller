@@ -326,6 +326,29 @@ def require_wallet():
 app = Flask(__name__)
 
 
+# DNS-rebinding guard. The server binds to 127.0.0.1, but a malicious page can point its own
+# domain at 127.0.0.1 and then call these wallet and trading routes as a "same-origin" page.
+# Browsers always send the Host they think they are talking to, so only accept local names.
+# Add names (comma-separated) in JUP_ALLOWED_HOSTS if you deliberately serve it elsewhere.
+_ALLOWED_HOSTS = {"127.0.0.1", "localhost", "[::1]"} | {
+    h.strip().lower() for h in os.getenv("JUP_ALLOWED_HOSTS", "").split(",") if h.strip()}
+
+
+def _host_name(host_header):
+    host = (host_header or "").strip().lower()
+    if host.startswith("["):                      # IPv6 literal, e.g. [::1]:5010
+        return host.split("]")[0] + "]"
+    return host.rsplit(":", 1)[0] if ":" in host else host
+
+
+@app.before_request
+def _reject_foreign_host():
+    from flask import request as _rq
+    if _host_name(_rq.host) not in _ALLOWED_HOSTS:
+        return jsonify({"error": "forbidden host"}), 403
+    return None
+
+
 @app.before_request
 def _tag_sellbox_request():
     # Flask's dev server runs each request on its own thread, so a

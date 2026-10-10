@@ -1,0 +1,5 @@
+pytest>=8
+requests>=2.31
+websocket-client>=1.7
+beautifulsoup4>=4.12
+flask>=3

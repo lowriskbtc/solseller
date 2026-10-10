@@ -9,3 +9,11 @@ __pycache__/
 *.bak*
 .venv/
 
+# wallets and local state: never commit
+wallets.enc.json
+*.enc.json
+evm_wallets*.json
+*_config.json
+*_positions*.json
+tpsl_state*.json
+paper_state*.json

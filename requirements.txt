@@ -1,0 +1,11 @@
+flask
+requests
+base58
+cryptography
+solders
+websocket-client
+beautifulsoup4
+# EVM copy-trading module (imported at startup)
+web3
+eth-account
+eth-abi
