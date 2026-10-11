@@ -1,5 +1,7 @@
 # solseller
 
+[![CI](https://github.com/lowriskbtc/solseller/actions/workflows/ci.yml/badge.svg)](https://github.com/lowriskbtc/solseller/actions/workflows/ci.yml) ![Python](https://img.shields.io/badge/python-3.11%20%7C%203.12%20%7C%203.13-3776AB?logo=python&logoColor=white) [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+
 A self-hosted Solana trading terminal built around Jupiter swaps: paste a token address, buy with SOL, sell a percentage of holdings, and let a server-side take-profit / stop-loss executor manage exits. It includes a paper-trading book, an exact pump.fun bonding-curve simulator, and a pop-out "sell box" window.
 
 > Personal trading software shared as source. It can sign and send real transactions from your wallet. Read the code, start in paper mode, and use a wallet funded with an amount you can afford to lose. Nothing here is financial advice.
